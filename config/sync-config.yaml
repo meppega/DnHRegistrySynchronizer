@@ -1,12 +1,13 @@
 
 images:
-  - source: docker.io/library/nginx:latest
+  - source: docker.io/library/nginx:3.22
     destination: myacr.azurecr.io/library/nginx:latest
-  - source: ghcr.io/myorg/myapp:1.2.3
-    destination: myacr.azurecr.io/myorg/myapp:1.2.3
+  - source: docker.io/library/nginx:3.16
+    destination: myacr.azurecr.io/library/nginx:latest
 
 helm_charts:
-  - name: mychart
-    repo: https://charts.example.com
-    version: 1.0.0
-    destination: myacr.azurecr.io/helm/mychart
+  - name: hello-world-h
+    repo: ./hello-world-h
+    version: 0.1.0
+    destination: myacr.azurecr.io/helm/hello-world-h
+
