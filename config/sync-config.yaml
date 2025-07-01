@@ -1,0 +1,12 @@
+
+images:
+  - source: docker.io/library/nginx:latest
+    destination: myacr.azurecr.io/library/nginx:latest
+  - source: ghcr.io/myorg/myapp:1.2.3
+    destination: myacr.azurecr.io/myorg/myapp:1.2.3
+
+helm_charts:
+  - name: mychart
+    repo: https://charts.example.com
+    version: 1.0.0
+    destination: myacr.azurecr.io/helm/mychart

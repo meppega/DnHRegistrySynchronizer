@@ -17,4 +17,4 @@ node_modules/
 Thumbs.db
 
 # Kubernetes
-*.yaml~  # backup files
+*.yaml~ # backup files
