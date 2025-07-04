@@ -10,7 +10,7 @@ docker compose --profile local-registry up -d
 
 tools
 ```
-docker compose --profile tools up -d
+docker compose --profile tools<nr> up -d
 ```
 
 shut down
