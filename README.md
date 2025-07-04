@@ -1,6 +1,23 @@
 # DnHRegistrySynchronizer
 A test project to synchronize select Helm and Docker registries from public ones - to private ones.
 
+## running project
+
+local registry
+```
+docker compose --profile local-registry up -d
+```
+
+tools
+```
+docker compose --profile tools up -d
+```
+
+shut down
+```
+docker compose --profile local-registry --profile tools down
+```
+
 ## some scripts for later / script history
 
 ```

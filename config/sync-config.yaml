@@ -1,13 +1,14 @@
 
 images:
-  - source: docker.io/library/nginx:3.22
-    destination: myacr.azurecr.io/library/nginx:latest
-  - source: docker.io/library/nginx:3.16
-    destination: myacr.azurecr.io/library/nginx:latest
+  - source: docker.io/library/alpine:3.22
+    # destination: myacr.azurecr.io/library/alpine:latest
+    destination: localhost:5000/library/alpine:3.22
+  - source: docker.io/library/alpine:3.16
+    destination: localhost:5000/library/alpine:3.16
 
 helm_charts:
   - name: hello-world-h
     repo: ./hello-world-h
     version: 0.1.0
-    destination: myacr.azurecr.io/helm/hello-world-h
+    destination: localhost:5000/helm/hello-world-h
 
