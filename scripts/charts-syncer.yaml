@@ -1,0 +1,17 @@
+source:
+  repo:
+    kind: HELM
+    url: https://charts.bitnami.com/bitnami
+
+target:
+  repo:
+    kind: OCI
+    url: http://registry:5000
+
+charts:
+  - name: alpine
+    version: 1.0.0
+
+# appversion: 3
+
+# logLevel: debug

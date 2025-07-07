@@ -18,6 +18,14 @@ shut down
 docker compose --profile local-registry --profile tools down
 ```
 
+check if the tools work:
+```
+curl http://localhost:5000/v2/_catalog
+
+
+curl http://localhost:5000/v2/alpine/tags/list
+```
+
 ## some scripts for later / script history
 
 ```
@@ -61,18 +69,18 @@ kubectl config current-context
 - [ ] Authenticate with Azure using `scripts/auth-azure.sh`
 
 ## Configuration
-- [ ] Define images and charts in `config/sync-config.yaml`
-- [ ] Add public Docker images for testing (e.g., Alpine, NGINX)
-- [ ] Add Helm charts for testing (optional)
+- [X] Define images and charts in `config/sync-config.yaml`
+- [X] Add public Docker images for testing (e.g., Alpine, NGINX)
+- [ ] Add Helm charts for testing
 
 ## Synchronization, will likely switch to Go/Python
-- [ ] Implement `scripts/sync-images.sh` using Skopeo / Crane / etc
+- [X] Implement `scripts/sync-images.sh` using Skopeo / Crane / etc
 - [ ] Implement `scripts/sync-helm.sh` using Helm CLI / chart-syncer / etc
 - [ ] Test manual sync locally
 
 ## Deployment
-- [ ] Build and tag Docker example (`hello-world-d`)
-- [ ] Deploy Helm chart (`hello-world-h`)
+- [X] Build Docker example (`hello-world-d`)
+- [X] Deploy Helm chart (`hello-world-h`)
 - [ ] Automate with GitHub Actions or Azure Pipelines
 
 ## Testing

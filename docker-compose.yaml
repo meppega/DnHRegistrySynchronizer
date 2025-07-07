@@ -33,6 +33,7 @@ services:
     image: bitnami/charts-syncer:latest
     container_name: charts-syncer
     volumes:
-      - ./charts:/charts
+      - ./scripts/charts-syncer.yaml:/charts-syncer.yaml
+    command: ["sync", "--config", "/charts-syncer.yaml"]
     profiles:
       - tools2
