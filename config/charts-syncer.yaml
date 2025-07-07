@@ -6,8 +6,8 @@ source:
 target:
   repo:
     kind: OCI
-    url: http://registry:5000
+    url: oci://localhost:5000/charts
 
 charts:
-  - alpine
+#  - alpine
   - nginx

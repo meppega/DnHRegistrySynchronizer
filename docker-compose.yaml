@@ -14,7 +14,7 @@ services:
     volumes:
       - ./data:/data
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./config/sync-skopeo.sh:/sync.sh
+      - ./scripts/sync-skopeo.sh:/sync.sh
     entrypoint: ["sh", "/sync.sh"]
     # depends_on:
     #  - registry
@@ -33,7 +33,13 @@ services:
     image: bitnami/charts-syncer:latest
     container_name: charts-syncer
     volumes:
-      - ./scripts/charts-syncer.yaml:/charts-syncer.yaml
-    command: ["sync", "--config", "/charts-syncer.yaml"]
+      - ./config/charts-syncer.yaml:/charts-syncer.yaml
+    command: ["sync", "--config", "/charts-syncer.yaml","-v","3"]
     profiles:
       - tools2
+
+  dregsy:
+    image: xelalex/dregsy:0.5.2-ubuntu
+    container_name: dregsy
+    profiles:
+      - tools3
