@@ -9,9 +9,5 @@ target:
     url: http://registry:5000
 
 charts:
-  - name: alpine
-    version: 1.0.0
-
-# appversion: 3
-
-# logLevel: debug
+  - alpine
+  - nginx
