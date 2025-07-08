@@ -41,5 +41,9 @@ services:
   dregsy:
     image: xelalex/dregsy:0.5.2-ubuntu
     container_name: dregsy
+    volumes:
+      - ./config/sync-dregsy.yaml:/config.yaml
+    environment:
+      - LOG_LEVEL=debug
     profiles:
       - tools3
