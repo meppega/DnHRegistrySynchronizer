@@ -80,13 +80,13 @@ tasks:
     #   - from: test/another-image
     #     platform: linux/arm64/v8
 
-  - name: sync-bitnami-nginx-chart
+  - name: sync-chart
     verbose: true
     source:
-      registry: helm://https://charts.bitnami.com/bitnami
+      registry: kubernetes.github.io/ingress-nginx
     target:
       registry: localhost:5000/charts
       skip-tls-verify: true
     mappings:
-      - from: nginx
-        tags: ['15.14.0']
+      - from: ingress-nginx
+        tags: ['4.13.0']
