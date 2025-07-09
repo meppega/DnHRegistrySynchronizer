@@ -1,6 +1,8 @@
 # DnHRegistrySynchronizer
 A test project to synchronize select Helm and Docker registries from public ones - to private ones.
 
+> Remember about the line endings of .sh scripts!
+
 ## running project
 
 local registry
