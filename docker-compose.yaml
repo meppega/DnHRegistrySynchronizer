@@ -21,7 +21,9 @@ services:
      - ./local_registry/certs:/certs:ro 
 
   skopeo:
-    image: quay.io/skopeo/stable:latest
+    image: my-skopeo-helm:latest #quay.io/skopeo/stable:latest
+    build:
+      context: ./skopeo-with-helm
     container_name: skopeo
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
