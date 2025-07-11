@@ -8,17 +8,17 @@ services:
     profiles:
       - registry
     environment:
-      # --- Basic Authentication Configuration ---
-      REGISTRY_AUTH: htpasswd
-      REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"
-      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-      # --- HTTPS (TLS) Configuration ---
+    #   # --- Basic Authentication Configuration ---
+    #   REGISTRY_AUTH: htpasswd
+    #   REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"
+    #   REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+    #   # --- HTTPS (TLS) Configuration ---
       REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
       REGISTRY_HTTP_TLS_KEY: /certs/domain.key
     volumes:
-      #- ./local_registry/data:/var/lib/registry # Persist registry data
-      - ./local_registry/auth:/auth:ro          # Mount htpasswd file (read-only)
-      - ./local_registry/certs:/certs:ro 
+    #   #- ./local_registry/data:/var/lib/registry # Persist registry data
+    #   - ./local_registry/auth:/auth:ro          # Mount htpasswd file (read-only)
+     - ./local_registry/certs:/certs:ro 
 
   skopeo:
     image: quay.io/skopeo/stable:latest
@@ -26,10 +26,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts/sync-skopeo.sh:/sync.sh
-      - type: bind
-        source: ./local_registry/certs/domain.crt # Host path
-        target: /etc/containers/certs.d/registry:5000/ca.crt # Container path (now works with colons)
-        read_only: true
+      - ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
     entrypoint: ["sh", "/sync.sh"]
     # depends_on:
     #  - registry
