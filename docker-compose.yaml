@@ -7,14 +7,14 @@ services:
       - "5000:5000"
     profiles:
       - registry
-    environment:
+    #environment:
     #   # --- Basic Authentication Configuration ---
     #   REGISTRY_AUTH: htpasswd
     #   REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"
     #   REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
     #   # --- HTTPS (TLS) Configuration ---
-      REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
-      REGISTRY_HTTP_TLS_KEY: /certs/domain.key
+    #  REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
+    #  REGISTRY_HTTP_TLS_KEY: /certs/domain.key
     volumes:
     #   #- ./local_registry/data:/var/lib/registry # Persist registry data
     #   - ./local_registry/auth:/auth:ro          # Mount htpasswd file (read-only)
@@ -28,7 +28,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts/sync-skopeo.sh:/sync.sh
-      - ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
+      #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
     entrypoint: ["sh", "/sync.sh"]
     # depends_on:
     #  - registry

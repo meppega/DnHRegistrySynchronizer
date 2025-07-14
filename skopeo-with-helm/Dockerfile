@@ -1,4 +1,4 @@
-FROM quay.io/skopeo/stable:latest
+FROM quay.io/skopeo/stable:1.19.0
 
 ARG HELM_VERSION=3.14.4
 
