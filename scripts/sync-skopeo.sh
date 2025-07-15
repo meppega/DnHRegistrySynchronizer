@@ -2,6 +2,8 @@
 
 set -e
 
+CONFIG_FILE="sync-config.yaml"
+
 REGISTRY_URL="registry:5000"
 REGISTRY_USER="admin"
 REGISTRY_PASS="admin"
@@ -77,6 +79,27 @@ check_and_copy_helm "kubernetes-ingress" \
     "ingress-nginx" \
     "4.13.0" \
     "oci://registry:5000/charts/"
+
+echo "--- Syncing Docker images ---"
+# Loop through dockerImages from YAML
+yq -o=j '.dockerImages[]' "/sync-config.yaml" | while read -r image_json; do
+    SOURCE_IMAGE=$(echo "${image_json}" | yq -p=json '.source')
+    DEST_PATH=$(echo "${image_json}" | yq -p=json '.destinationPath')
+    
+    echo "${SOURCE_IMAGE}${DEST_PATH}"
+done
+
+echo "--- Syncing Helm Charts ---"
+# Loop through helmCharts from YAML
+yq -o=j '.helmCharts[]' "${CONFIG_FILE}" | while read -r chart_json; do
+    REPO_NAME=$(echo "${chart_json}" | yq '.repoName')
+    REPO_URL=$(echo "${chart_json}" | yq '.repoUrl')
+    CHART_NAME=$(echo "${chart_json}" | yq '.chartName')
+    CHART_VERSION=$(echo "${chart_json}" | yq '.chartVersion')
+    DEST_PATH=$(echo "${chart_json}" | yq '.destinationPath')
+
+    echo "${REPO_NAME}${REPO_URL}${CHART_NAME}${CHART_VERSION}${DEST_PATH}"
+done
 
 sleep 1
 echo "Done."

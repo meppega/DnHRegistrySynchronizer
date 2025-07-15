@@ -21,13 +21,15 @@ services:
      - ./local_registry/certs:/certs:ro 
 
   skopeo:
-    image: my-skopeo-helm:latest #quay.io/skopeo/stable:latest
+    image: my-skopeo-helm:latest
     build:
       context: ./skopeo-with-helm
+      dockerfile: my-skopeo-helm.dockerfile
     container_name: skopeo
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts/sync-skopeo.sh:/sync.sh
+      - ./config/sync-config.yaml:/sync-config.yaml
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
     entrypoint: ["sh", "/sync.sh"]
     # depends_on:
