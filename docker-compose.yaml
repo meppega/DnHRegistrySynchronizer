@@ -17,7 +17,7 @@ services:
     #  REGISTRY_HTTP_TLS_KEY: /certs/domain.key
     volumes:
     #   #- ./local_registry/data:/var/lib/registry # Persist registry data
-    #   - ./local_registry/auth:/auth:ro          # Mount htpasswd file (read-only)
+    #   - ./local_registry/auth:/auth:ro          # (read-only)
      - ./local_registry/certs:/certs:ro 
 
   skopeo:
