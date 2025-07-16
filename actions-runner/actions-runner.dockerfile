@@ -58,11 +58,12 @@ RUN apt-fast update \
     wget \
     zip \
     gh \
-    tzdata
+    tzdata \
+    skopeo
 
-COPY actions-runners/runners-images/pracuj-local-dc-atm-ca.crt /usr/local/share/ca-certificates/
-COPY actions-runners/runners-images/pracuj-local-ca.crt /usr/local/share/ca-certificates/
-RUN update-ca-certificates
+# COPY actions-runners/runners-images/pracuj-local-dc-atm-ca.crt /usr/local/share/ca-certificates/
+# COPY actions-runners/runners-images/pracuj-local-ca.crt /usr/local/share/ca-certificates/
+# RUN update-ca-certificates
 
 #powershell
 RUN wget https://github.com/PowerShell/PowerShell/releases/download/v7.4.2/powershell_7.4.2-1.deb_amd64.deb \

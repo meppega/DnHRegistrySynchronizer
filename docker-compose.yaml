@@ -64,3 +64,20 @@ services:
       - LOG_LEVEL=debug
     profiles:
       - tools3
+
+  acions-runner:
+    image: actions-runner:latest
+    build:
+      context: ./actions-runner
+      dockerfile: actions-runner.dockerfile
+    container_name: actions-runner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts/sync-skopeo.sh:/sync.sh
+      - ./config/sync-config.yaml:/sync-config.yaml
+      #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
+    entrypoint: ["sh", "/sync.sh"]
+    # depends_on:
+    #  - registry
+    profiles:
+      - runner
