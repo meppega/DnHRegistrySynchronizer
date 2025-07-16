@@ -2,7 +2,7 @@
 
 set -e
 
-CONFIG_FILE="sync-config.yaml"
+CONFIG_FILE="/sync-config.yaml"
 
 REGISTRY_URL="registry:5000"
 REGISTRY_USER="admin"
@@ -62,43 +62,50 @@ check_and_copy_skopeo() {
 # logging skopeo in
 #echo "$REGISTRY_PASS" | skopeo login "$REGISTRY_URL" --username "$REGISTRY_USER" --password-stdin
 
-echo "Syncing Docker images to registry..."
-
-check_and_copy_skopeo "docker.io/library/alpine:3.22" "$REGISTRY_URL/alpine:3.22"
-check_and_copy_skopeo "docker.io/library/alpine:3.16" "$REGISTRY_URL/alpine:3.16"
-check_and_copy_skopeo "docker.io/grafana/grafana:12.0.2" "$REGISTRY_URL/charts/grafana:12.0.2"
-
-check_and_copy_helm "bitnami" \
-    "https://charts.bitnami.com/bitnami" \
-    "nginx" \
-    "15.14.0" \
-    "oci://registry:5000/charts/"
-
-check_and_copy_helm "kubernetes-ingress" \
-    "https://kubernetes.github.io/ingress-nginx" \
-    "ingress-nginx" \
-    "4.13.0" \
-    "oci://registry:5000/charts/"
-
 echo "--- Syncing Docker images ---"
-# Loop through dockerImages from YAML
-yq -o=j '.dockerImages[]' "/sync-config.yaml" | while read -r image_json; do
-    SOURCE_IMAGE=$(echo "${image_json}" | yq -p=json '.source')
-    DEST_PATH=$(echo "${image_json}" | yq -p=json '.destinationPath')
-    
-    echo "${SOURCE_IMAGE}${DEST_PATH}"
+
+# check_and_copy_skopeo "docker.io/library/alpine:3.22" "$REGISTRY_URL/alpine:3.22"
+# check_and_copy_skopeo "docker.io/library/alpine:3.16" "$REGISTRY_URL/alpine:3.16"
+# check_and_copy_skopeo "docker.io/grafana/grafana:12.0.2" "$REGISTRY_URL/charts/grafana:12.0.2"
+
+image_count=$(yq '.dockerImages | length' "${CONFIG_FILE}")
+
+for i in $(seq 0 $((image_count - 1))); do
+    SOURCE_IMAGE=$(yq ".dockerImages[$i].source" "${CONFIG_FILE}")
+    DEST_PATH=$(yq ".dockerImages[$i].destinationPath" "${CONFIG_FILE}")
+
+    check_and_copy_skopeo "${SOURCE_IMAGE}" "${REGISTRY_URL}/${DEST_PATH}"
 done
 
 echo "--- Syncing Helm Charts ---"
-# Loop through helmCharts from YAML
-yq -o=j '.helmCharts[]' "${CONFIG_FILE}" | while read -r chart_json; do
-    REPO_NAME=$(echo "${chart_json}" | yq '.repoName')
-    REPO_URL=$(echo "${chart_json}" | yq '.repoUrl')
-    CHART_NAME=$(echo "${chart_json}" | yq '.chartName')
-    CHART_VERSION=$(echo "${chart_json}" | yq '.chartVersion')
-    DEST_PATH=$(echo "${chart_json}" | yq '.destinationPath')
 
-    echo "${REPO_NAME}${REPO_URL}${CHART_NAME}${CHART_VERSION}${DEST_PATH}"
+# check_and_copy_helm "bitnami" \
+#     "https://charts.bitnami.com/bitnami" \
+#     "nginx" \
+#     "15.14.0" \
+#     "oci://registry:5000/charts/"
+
+# check_and_copy_helm "kubernetes-ingress" \
+#     "https://kubernetes.github.io/ingress-nginx" \
+#     "ingress-nginx" \
+#     "4.13.0" \
+#     "oci://registry:5000/charts/"
+
+chart_count=$(yq '.helmCharts | length' "${CONFIG_FILE}")
+
+for i in $(seq 0 $((chart_count - 1))); do
+    REPO_NAME=$(yq ".helmCharts[$i].repoName" "${CONFIG_FILE}")
+    REPO_URL=$(yq ".helmCharts[$i].repoUrl" "${CONFIG_FILE}")
+    CHART_NAME=$(yq ".helmCharts[$i].chartName" "${CONFIG_FILE}")
+    CHART_VERSION=$(yq ".helmCharts[$i].chartVersion" "${CONFIG_FILE}")
+    DEST_PATH=$(yq ".helmCharts[$i].destinationPath" "${CONFIG_FILE}")
+
+    check_and_copy_helm \
+        "${REPO_NAME}" \
+        "${REPO_URL}" \
+        "${CHART_NAME}" \
+        "${CHART_VERSION}" \
+        "oci://${REGISTRY_URL}/${DEST_PATH}"
 done
 
 sleep 1
