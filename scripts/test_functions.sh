@@ -28,7 +28,7 @@ check_registry_images() {
         SOURCE_IMAGE=$(yq ".dockerImages[$i].source" "${CONFIG_FILE}")
         DEST_PATH=$(yq ".dockerImages[$i].destinationPath" "${CONFIG_FILE}")
         EXPECTED_DEST_IMAGE="${DEST_PATH}"
-        echo ${EXPECTED_DEST_IMAGE}
+        # echo ${EXPECTED_DEST_IMAGE}
         expected_images["${EXPECTED_DEST_IMAGE}"]=1 # Store as key for quick existence check
     done
     # For Helm
@@ -38,7 +38,7 @@ check_registry_images() {
         CHART_VERSION=$(yq ".helmCharts[$i].chartVersion" "${CONFIG_FILE}")
         DEST_PATH=$(yq ".helmCharts[$i].destinationPath" "${CONFIG_FILE}")
         EXPECTED_DEST_IMAGE="${DEST_PATH}${CHART_NAME}:${CHART_VERSION}"
-        echo ${EXPECTED_DEST_IMAGE}
+        # echo ${EXPECTED_DEST_IMAGE}
         expected_images["${EXPECTED_DEST_IMAGE}"]=1
     done
 
