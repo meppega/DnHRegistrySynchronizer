@@ -6,19 +6,8 @@ set -e
 CONFIG_FILE="/sync-config.yaml"
 
 REGISTRY_URL="registry:5000"
-REGISTRY_USER="admin"
-REGISTRY_PASS="admin"
-
-# Function to check if all necessary dependencies are installed
-check_dependencies() {
-    local deps=("yq" "skopeo" "helm" "curl" "jq" "sha256sum")
-    for dep in "${deps[@]}"; do
-        if ! command -v "$dep" &> /dev/null; then
-            echo "Error: Required command '$dep' is not installed. Please install it."
-            exit 1
-        fi
-    done
-}
+# REGISTRY_USER="admin"
+# REGISTRY_PASS="admin"
 
 # Function to get Docker image SHA256 digest using skopeo inspect
 # Arguments:
@@ -28,13 +17,19 @@ get_docker_image_digest() {
     local image_ref="$1"
     local tls_verify_flag="$2"
     local digest=""
+    local inspect_output
+
     echo "  > Inspecting Docker image: ${image_ref}"
     # Use skopeo inspect to get the manifest digest.
     # Redirect stderr to /dev/null to suppress "image not found" errors when inspecting non-existent images,
     # and handle the exit code.
-    local inspect_output=$(skopeo inspect "docker://${image_ref}" "${tls_verify_flag}" 2>/dev/null)
-    if [ $? -eq 0 ] && [ -n "${inspect_output}" ]; then
-        digest=$(echo "${inspect_output}" | jq -r '.Digest')
+    if inspect_output=$(skopeo inspect "docker://${image_ref}" "${tls_verify_flag}" 2>/dev/null); then
+        # Command succeeded, now check if output is non-empty
+        if [ -n "${inspect_output}" ]; then
+            digest=$(echo "${inspect_output}" | jq -r '.Digest')
+        else
+            echo "    Warning: Skopeo inspect succeeded but returned empty output for ${image_ref}." >&2
+        fi
     else
         echo "    Warning: Could not inspect image ${image_ref}. It might not exist or there's a connectivity issue." >&2
     fi
@@ -60,9 +55,9 @@ validate_sync() {
     # Log in to the local registry for Skopeo and Helm to ensure access
     echo "  > Logging into local registry: ${REGISTRY_URL}..."
     # Skopeo login
-    echo "${REGISTRY_PASS}" | skopeo login "${REGISTRY_URL}" --username "${REGISTRY_USER}" --password-stdin || { echo "Skopeo login failed."; exit 1; }
+    #echo "${REGISTRY_PASS}" | skopeo login "${REGISTRY_URL}" --username "${REGISTRY_USER}" --password-stdin || { echo "Skopeo login failed."; exit 1; }
     # Helm registry login (using --plain-http for insecure local registry)
-    helm registry login "${REGISTRY_URL}" --username "${REGISTRY_USER}" --password "${REGISTRY_PASS}" --plain-http || { echo "Helm registry login failed."; exit 1; }
+    #helm registry login "${REGISTRY_URL}" --username "${REGISTRY_USER}" --password "${REGISTRY_PASS}" --plain-http || { echo "Helm registry login failed."; exit 1; }
 
     # Validate Docker Images
     echo ""
@@ -110,7 +105,7 @@ validate_sync() {
         echo "  > Using temporary directory for Helm charts: ${TEMP_DIR}"
 
         for i in $(seq 0 $((chart_count - 1))); do
-            REPO_NAME=$(yq ".helmCharts[$i].repoName" "${CONFIG_FILE}")
+            # REPO_NAME=$(yq ".helmCharts[$i].repoName" "${CONFIG_FILE}")
             REPO_URL=$(yq ".helmCharts[$i].repoUrl" "${CONFIG_FILE}")
             CHART_NAME=$(yq ".helmCharts[$i].chartName" "${CONFIG_FILE}")
             CHART_VERSION=$(yq ".helmCharts[$i].chartVersion" "${CONFIG_FILE}")
@@ -123,7 +118,7 @@ validate_sync() {
 
             SOURCE_CHART_FILE="${TEMP_DIR}/${CHART_NAME}-${CHART_VERSION}.tgz"
             # Helm pull from OCI also names the file chartname-version.tgz
-            DEST_CHART_FILE="${TEMP_DIR}/${CHART_NAME}-${CHART_VERSION}.tgz" # Will overwrite source one, so need to pull separately
+            # DEST_CHART_FILE="${TEMP_DIR}/${CHART_NAME}-${CHART_VERSION}.tgz" # Will overwrite source one, so need to pull separately
 
             # Pull source chart to a unique temporary file
             echo "  > Pulling source chart from ${REPO_URL}..."
@@ -166,9 +161,6 @@ validate_sync() {
 
     echo "--- Sync Validation Complete ---"
 }
-
-# Run dependency check
-check_dependencies
 
 # Run validation
 validate_sync

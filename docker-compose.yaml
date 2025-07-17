@@ -74,7 +74,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts/sync_registries.sh:/sync.sh
-      - ./scripts/test_functions.sh:/test-functions.sh
+      - ./scripts/test_functions.sh:/test_functions.sh
+      - ./scripts/validate_sync.sh:/validate_sync.sh
       - ./config/sync-config.yaml:/sync-config.yaml
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
     entrypoint: ["sh", "/sync.sh"]

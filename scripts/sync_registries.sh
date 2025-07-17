@@ -8,6 +8,17 @@ REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
 REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
 REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
 
+# Function to check if all necessary dependencies are installed
+# check_dependencies() {
+#     local deps=("yq" "skopeo" "helm" "curl" "jq" "sha256sum")
+#     for dep in "${deps[@]}"; do
+#         if ! command -v "$dep" &> /dev/null; then
+#             echo "Error: Required command '$dep' is not installed. Please install it."
+#             exit 1
+#         fi
+#     done
+# }
+
 #TODO: add comparing if images are different
 check_and_copy_helm() {
     REPO_NAME="$1"
@@ -29,20 +40,19 @@ check_and_copy_helm() {
     #helm repo update
 
     echo "  > Pulling Helm chart from traditional repository..."
-    helm pull "${CHART_NAME}" --repo "${REPO_URL}" --version "${CHART_VERSION}"
-    #--destination /data
+    helm pull "${CHART_NAME}" --repo "${REPO_URL}" --version "${CHART_VERSION}" --destination /tmp
 
-    if [ ! -f "${FILE_NAME}.tgz" ]; then
+    if [ ! -f "/tmp/${FILE_NAME}.tgz" ]; then
         echo "Error: Chart ${HELM_CHART}.tgz failed to download. Skipping."
         return
     fi
  
     helm push \
-    "${FILE_NAME}.tgz" \
+    "/tmp/${FILE_NAME}.tgz" \
     "${DEST_REPO}" \
     --plain-http
 
-    rm "${FILE_NAME}.tgz"
+    rm "/tmp/${FILE_NAME}.tgz"
 }
 
 check_and_copy_skopeo() {
@@ -58,6 +68,9 @@ check_and_copy_skopeo() {
     echo "$DEST_IMAGE not found. Copying..."
     skopeo copy "docker://${SOURCE_IMAGE}" "docker://${DEST_IMAGE}" --dest-tls-verify=false
 }
+
+# Run dependency check
+# check_dependencies
 
 # logging skopeo in
 #echo "$REGISTRY_PASS" | skopeo login "$REGISTRY_URL" --username "$REGISTRY_USER" --password-stdin
@@ -111,4 +124,5 @@ done
 sleep 1
 echo "Done."
 
-exec /test_functions.sh
+/test_functions.sh
+exec /validate_sync.sh
