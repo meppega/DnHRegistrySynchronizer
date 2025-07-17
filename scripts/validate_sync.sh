@@ -139,7 +139,7 @@ validate_helm() {
         # Pull destination chart from OCI registry to a *different* unique temporary file
         echo "  > Pulling destination chart from ${DEST_OCI_URL}..."
         # Create a distinct file name for the destination chart to avoid conflicts
-        LOCAL_DEST_CHART_FILE="${TEMP_DIR}/dest_${CHART_NAME}-${CHART_VERSION}.tgz"
+        # LOCAL_DEST_CHART_FILE="${TEMP_DIR}/dest_${CHART_NAME}-${CHART_VERSION}.tgz"
         if helm pull "${DEST_OCI_URL}" --version "${CHART_VERSION}" --destination "${TEMP_DIR}" --plain-http --untar=false >/dev/null 2>&1; then
             DEST_SHA=$(get_tgz_sha256 "${SOURCE_CHART_FILE}")
         else
