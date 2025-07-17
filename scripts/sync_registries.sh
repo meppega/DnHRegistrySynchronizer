@@ -111,4 +111,4 @@ done
 sleep 1
 echo "Done."
 
-exec /test-functions.sh
+exec /test_functions.sh
