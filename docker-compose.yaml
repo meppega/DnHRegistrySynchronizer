@@ -74,6 +74,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts/sync-skopeo.sh:/sync.sh
+      - ./scripts/test-functions.sh:/test-functions.sh
       - ./config/sync-config.yaml:/sync-config.yaml
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
     entrypoint: ["sh", "/sync.sh"]

@@ -1,12 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
 CONFIG_FILE="/sync-config.yaml"
 
-REGISTRY_URL="registry:5000"
-REGISTRY_USER="admin"
-REGISTRY_PASS="admin"
+REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
+REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
+REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
 
 #TODO: add comparing if images are different
 check_and_copy_helm() {
@@ -110,3 +110,5 @@ done
 
 sleep 1
 echo "Done."
+
+exec /test-functions.sh
