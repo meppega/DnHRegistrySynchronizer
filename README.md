@@ -3,6 +3,8 @@ A test project to synchronize select Helm and Docker registries from public ones
 
 > Remember about the line endings of .sh scripts!
 
+> Rename project to ARISU - Automatic Recurring Image Synchronization Utility
+
 ## running project
 
 local registry
