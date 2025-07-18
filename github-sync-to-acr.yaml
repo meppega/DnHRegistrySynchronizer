@@ -1,0 +1,157 @@
+name: Manage & Sync Images/Charts to ACR
+
+on:
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+    inputs:
+      action:
+        description: 'Action to perform:'
+        required: true
+        type: choice
+        options:
+          - sync-all # Run the main synchronization script
+          - add-image # Add a Docker image entry to sync-config.yaml
+          - delete-image # Delete a Docker image entry from sync-config.yaml
+          - add-chart # Add a Helm chart entry to sync-config.yaml
+          - delete-chart # Delete a Helm chart entry from sync-config.yaml
+      
+      # Inputs for Docker Image Operations
+      image_source:
+        description: 'Docker Image Source (e.g., docker.io/library/alpine:3.22)'
+        required: false
+        type: string
+      image_destination_path:
+        description: 'Docker Image Destination Path (e.g., alpine:3.22 - used for add-image)'
+        required: false
+        type: string
+
+      # Inputs for Helm Chart Operations
+      chart_repo_name:
+        description: 'Helm Chart Repository Name (e.g., bitnami)'
+        required: false
+        type: string
+      chart_repo_url:
+        description: 'Helm Chart Repository URL (e.g., https://charts.bitnami.com/bitnami - used for add-chart)'
+        required: false
+        type: string
+      chart_name:
+        description: 'Helm Chart Name (e.g., nginx)'
+        required: false
+        type: string
+      chart_version:
+        description: 'Helm Chart Version (e.g., 15.14.0)'
+        required: false
+        type: string
+      chart_destination_path:
+        description: 'Helm Chart Destination Path (e.g., charts/nginx - used for add-chart)'
+        required: false
+        type: string
+
+  schedule:
+    # Runs every day at 00:00 UTC for full sync
+    - cron: '0 0 * * *'
+
+env:
+  # Replace with your actual ACR login server, e.g., myregistry.azurecr.io
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_NAME }}.azurecr.io 
+
+jobs:
+  manage_and_sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        # Needed for committing changes back to the repo
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} # Use default GITHUB_TOKEN for push
+
+      - name: Install yq (Go version)
+        # yq is needed on the runner for add_yaml_entry.sh and remove_yaml_entry.sh
+        run: |
+          YQ_VERSION=4.44.2 # Use the same version as your Dockerfile if possible
+          wget "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64" -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          enable-AzPSSession: true # Required for Azure CLI to set up Docker credentials
+
+      - name: Docker Login to ACR
+        run: |
+          echo "Attempting Docker login to ACR: ${{ env.ACR_LOGIN_SERVER }}"
+          docker login ${{ env.ACR_LOGIN_SERVER }} \
+            -u ${{ secrets.AZURE_CLIENT_ID }} \
+            -p ${{ secrets.AZURE_CLIENT_SECRET }}
+        continue-on-error: false # Don't fail if login has issues, let sync attempt to proceed
+
+      - name: Build Custom Skopeo/Helm Image
+        # This ensures the sync container has the correct tools
+        run: docker compose build skopeo
+        working-directory: .
+
+      # --- Conditional Steps for YAML Modification ---
+      - name: Run Add Docker Image Script
+        if: github.event.inputs.action == 'add-image'
+        run: |
+          ./scripts/add_yaml_entry.sh image \
+            --source "${{ github.event.inputs.image_source }}" \
+            --destination-path "${{ github.event.inputs.image_destination_path }}"
+        working-directory: .
+
+      - name: Run Delete Docker Image Script
+        if: github.event.inputs.action == 'delete-image'
+        run: |
+          ./scripts/remove_yaml_entry.sh image \
+            --source "${{ github.event.inputs.image_source }}"
+        working-directory: .
+
+      - name: Run Add Helm Chart Script
+        if: github.event.inputs.action == 'add-chart'
+        run: |
+          ./scripts/add_yaml_entry.sh chart \
+            --repo-name "${{ github.event.inputs.chart_repo_name }}" \
+            --repo-url "${{ github.event.inputs.chart_repo_url }}" \
+            --chart-name "${{ github.event.inputs.chart_name }}" \
+            --chart-version "${{ github.event.inputs.chart_version }}" \
+            --destination-path "${{ github.event.inputs.chart_destination_path }}"
+        working-directory: .
+
+      - name: Run Delete Helm Chart Script
+        if: github.event.inputs.action == 'delete-chart'
+        run: |
+          ./scripts/remove_yaml_entry.sh chart \
+            --chart-name "${{ github.event.inputs.chart_name }}" \
+            --chart-version "${{ github.event.inputs.chart_version }}"
+        working-directory: .
+
+      # --- Commit changes to sync-config.yaml if any modification action was chosen ---
+      # This commits the updated sync-config.yaml back to the repository.
+      - name: Commit sync-config.yaml changes
+        # Only run if a modification action was chosen (not 'sync-all' or schedule)
+        if: |
+          github.event.inputs.action == 'add-image' ||
+          github.event.inputs.action == 'delete-image' ||
+          github.event.inputs.action == 'add-chart' ||
+          github.event.inputs.action == 'delete-chart'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add sync-config.yaml
+          git commit -m "chore(sync): Update sync-config.yaml via workflow dispatch (${{ github.event.inputs.action }})" || echo "No changes to commit" # '|| echo' prevents failure if no changes
+          git push
+        working-directory: .
+
+      # --- Run Synchronization Script ---
+      # This step runs if the action is 'sync-all' OR if any add/delete operation was performed
+      - name: Run Synchronization Script
+        if: |
+          github.event.inputs.action == 'sync-all' ||
+          github.event.inputs.action == 'add-image' ||
+          github.event.inputs.action == 'delete-image' ||
+          github.event.inputs.action == 'add-chart' ||
+          github.event.inputs.action == 'delete-chart' ||
+          github.event_name == 'schedule' # Also run on schedule trigger
+        run: docker compose run --rm --force-recreate --no-deps skopeo
+        working-directory: .

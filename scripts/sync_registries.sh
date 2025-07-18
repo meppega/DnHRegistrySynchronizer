@@ -4,6 +4,9 @@ set -e
 
 CONFIG_FILE="/sync-config.yaml"
 
+#REGISTRY_CONFIG_FILE="/registry-config.yaml"
+#REGISTRY_URL=$(yq '.registry.url' "${REGISTRY_CONFIG_FILE}")
+
 REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
 REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
 REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
@@ -74,6 +77,8 @@ check_and_copy_skopeo() {
 
 # logging skopeo in
 #echo "$REGISTRY_PASS" | skopeo login "$REGISTRY_URL" --username "$REGISTRY_USER" --password-stdin
+# helm login
+# helm registry login ...
 
 echo "--- Syncing Docker images ---"
 
