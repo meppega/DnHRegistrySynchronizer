@@ -3,16 +3,14 @@ registry:
   url: registry:5000
   user: admin
   password: admin
-
 # Docker Images to Synchronize
 dockerImages:
-  - source: docker.io/library/alpine:3.22
-    destinationPath: images/alpine:3.22
   - source: docker.io/library/alpine:3.16
     destinationPath: images/alpine:3.16
   - source: docker.io/grafana/grafana:12.0.2
     destinationPath: images/grafana:12.0.2
-
+  - source: docker.io/library/alpine:3.22
+    destinationPath: images/alpine:3.22
 # Helm Charts to Synchronize
 helmCharts:
   - repoName: bitnami

@@ -1,4 +1,3 @@
-
 services:
   registry:
     image: registry:2
@@ -35,35 +34,7 @@ services:
     # depends_on:
     #  - registry
     profiles:
-      - tools0
-
-  oras: # built into helm
-    image: ghcr.io/oras-project/oras:v1.1.0
-    container_name: oras
-    profiles:
-      - tools1
-
-  charts-syncer:
-    image: bitnami/charts-syncer:latest
-    container_name: charts-syncer
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./config/charts-syncer.yaml:/charts-syncer.yaml
-      - ./registries.conf:/etc/containers/registries.conf:ro
-    command: ["sync", "--config", "/charts-syncer.yaml","-v","3"]
-    profiles:
-      - tools2
-
-  dregsy:
-    image: xelalex/dregsy:0.5.2-ubuntu
-    container_name: dregsy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./config/sync-dregsy.yaml:/config.yaml
-    environment:
-      - LOG_LEVEL=debug
-    profiles:
-      - tools3
+      - skopeo
 
   acions-runner:
     image: actions-runner:latest
@@ -76,6 +47,8 @@ services:
       - ./scripts/sync_registries.sh:/sync.sh
       - ./scripts/test_functions.sh:/test_functions.sh
       - ./scripts/validate_sync.sh:/validate_sync.sh
+      - ./scripts/add_yaml_entry.sh:/add_yaml_entry.sh
+      - ./scripts/remove_yaml_entry.sh:/remove_yaml_entry.sh
       - ./config/sync-config.yaml:/sync-config.yaml
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
     entrypoint: ["sh", "/sync.sh"]

@@ -125,4 +125,18 @@ sleep 1
 echo "Done."
 
 /test_functions.sh
-exec /validate_sync.sh
+#exec /validate_sync.sh
+
+#/remove_yaml_entry.sh image --source "docker.io/library/alpine:3.22"
+#/add_yaml_entry.sh image --source "docker.io/library/alpine:3.22" --destination "images/alpine:3.22"
+
+# /remove_yaml_entry.sh chart \
+#     --chart-name "nginx" \
+#     --chart-version "15.14.0"
+
+# /add_yaml_entry.sh chart \
+#     --repo-name "bitnami" \
+#     --repo-url "https://charts.bitnami.com/bitnami" \
+#     --chart-name "nginx" \
+#     --chart-version "15.14.0" \
+#     --destination "charts/"
