@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -e
+#set -e
+set -eu #o pipefail
 
 CONFIG_FILE="/sync-config.yaml"
 
@@ -24,52 +25,88 @@ REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
 
 #TODO: add comparing if images are different
 check_and_copy_helm() {
-    REPO_NAME="$1"
-    REPO_URL="$2"
-    CHART_NAME="$3"
-    CHART_VERSION="$4"
-    DEST_REPO="$5"
-    FILE_NAME="${CHART_NAME}-${CHART_VERSION}"
+	local repo_name="$1"
+	local repo_url="$2"
+	local chart_name="$3"
+	local chart_version="$4"
+	local dest_repo="$5"
+	local file_name="${chart_name}-${chart_version}"
 
-    if helm show chart "${DEST_REPO}${CHART_NAME}" --plain-http > /dev/null 2>&1; then
-        echo "Chart ${DEST_REPO}${CHART_NAME} exists. Skipping."
-        return
-    fi
+	if helm show chart "${dest_repo}${chart_name}" --plain-http >/dev/null 2>&1; then
+		echo "Chart ${dest_repo}${chart_name} exists. Skipping."
+		return
+	fi
 
-    echo "Chart does not exist. Adding ${DEST_REPO}${CHART_NAME}"
+	echo "Chart does not exist. Adding ${dest_repo}${chart_name}"
 
-    #echo "  > Adding Helm repository: ${REPO_NAME} ..."
-    #helm repo add "${REPO_NAME}" "${REPO_URL}" --force-update
-    #helm repo update
+	echo "  > Adding Helm repository: ${repo_name} ..."
+	helm repo add "${repo_name}" "${repo_url}" --force-update
+	helm repo update
 
-    echo "  > Pulling Helm chart from traditional repository..."
-    helm pull "${CHART_NAME}" --repo "${REPO_URL}" --version "${CHART_VERSION}" --destination /tmp
+	echo "  > Pulling Helm chart from traditional repository..."
+	helm pull "${chart_name}" --repo "${repo_url}" --version "${chart_version}" --destination /tmp
 
-    if [ ! -f "/tmp/${FILE_NAME}.tgz" ]; then
-        echo "Error: Chart ${HELM_CHART}.tgz failed to download. Skipping."
-        return
-    fi
- 
-    helm push \
-    "/tmp/${FILE_NAME}.tgz" \
-    "${DEST_REPO}" \
-    --plain-http
+	if [ ! -f "/tmp/${file_name}.tgz" ]; then
+		echo "Error: Chart ${HELM_CHART}.tgz failed to download. Skipping."
+		return
+	fi
 
-    rm "/tmp/${FILE_NAME}.tgz"
+	helm push \
+		"/tmp/${file_name}.tgz" \
+		"${dest_repo}" \
+		--plain-http
+
+	rm "/tmp/${file_name}.tgz"
 }
 
 check_and_copy_skopeo() {
-    SOURCE_IMAGE="$1"
-    DEST_IMAGE="$2"
+	local source_image="$1"
+	local dest_image="$2"
 
-    echo "Checking if $DEST_IMAGE exists in registry..."
-    if skopeo inspect "docker://${DEST_IMAGE}" --tls-verify=false >/dev/null 2>&1; then
-        echo "$DEST_IMAGE already exists. Skipping copy."
-        return
-    fi
+	echo "Checking if $dest_image exists in registry..."
+	if skopeo inspect "docker://${dest_image}" --tls-verify=false >/dev/null 2>&1; then
+		echo "$dest_image already exists. Skipping copy."
+		return
+	fi
 
-    echo "$DEST_IMAGE not found. Copying..."
-    skopeo copy "docker://${SOURCE_IMAGE}" "docker://${DEST_IMAGE}" --dest-tls-verify=false
+	echo "${dest_image} not found. Copying..."
+	skopeo copy "docker://${source_image}" "docker://${dest_image}" --dest-tls-verify=false
+}
+
+loop_through_yaml_config_for_helm() {
+	local config_file="$1"
+	local registry_url="$2"
+
+    local chart_count=$(yq '.helmCharts | length' "${config_file}")
+
+	for i in $(seq 0 $((chart_count - 1))); do
+		local repo_name=$(yq ".helmCharts[$i].repoName" "${config_file}")
+		local repo_url=$(yq ".helmCharts[$i].repoUrl" "${config_file}")
+		local chart_name=$(yq ".helmCharts[$i].chartName" "${config_file}")
+		local chart_vertion=$(yq ".helmCharts[$i].chartVersion" "${config_file}")
+		local dest_path=$(yq ".helmCharts[$i].destinationPath" "${config_file}")
+
+		check_and_copy_helm \
+			"${repo_name}" \
+			"${repo_url}" \
+			"${chart_name}" \
+			"${chart_vertion}" \
+			"oci://${registry_url}/${dest_path}"
+	done
+}
+
+loop_through_yaml_config_for_skopeo() {
+	local config_file="$1"
+	local registry_url="$2"
+
+    local image_count=$(yq '.dockerImages | length' "${config_file}")
+
+	for i in $(seq 0 $((image_count - 1))); do
+		local source_image=$(yq ".dockerImages[$i].source" "${config_file}")
+		local dest_path=$(yq ".dockerImages[$i].destinationPath" "${config_file}")
+
+		check_and_copy_skopeo "${source_image}" "${registry_url}/${dest_path}"
+	done
 }
 
 # Run dependency check
@@ -86,45 +123,11 @@ echo "--- Syncing Docker images ---"
 # check_and_copy_skopeo "docker.io/library/alpine:3.16" "$REGISTRY_URL/alpine:3.16"
 # check_and_copy_skopeo "docker.io/grafana/grafana:12.0.2" "$REGISTRY_URL/charts/grafana:12.0.2"
 
-image_count=$(yq '.dockerImages | length' "${CONFIG_FILE}")
-
-for i in $(seq 0 $((image_count - 1))); do
-    SOURCE_IMAGE=$(yq ".dockerImages[$i].source" "${CONFIG_FILE}")
-    DEST_PATH=$(yq ".dockerImages[$i].destinationPath" "${CONFIG_FILE}")
-
-    check_and_copy_skopeo "${SOURCE_IMAGE}" "${REGISTRY_URL}/${DEST_PATH}"
-done
+loop_through_yaml_config_for_skopeo "${CONFIG_FILE}" "${REGISTRY_URL}"
 
 echo "--- Syncing Helm Charts ---"
 
-# check_and_copy_helm "bitnami" \
-#     "https://charts.bitnami.com/bitnami" \
-#     "nginx" \
-#     "15.14.0" \
-#     "oci://registry:5000/charts/"
-
-# check_and_copy_helm "kubernetes-ingress" \
-#     "https://kubernetes.github.io/ingress-nginx" \
-#     "ingress-nginx" \
-#     "4.13.0" \
-#     "oci://registry:5000/charts/"
-
-chart_count=$(yq '.helmCharts | length' "${CONFIG_FILE}")
-
-for i in $(seq 0 $((chart_count - 1))); do
-    REPO_NAME=$(yq ".helmCharts[$i].repoName" "${CONFIG_FILE}")
-    REPO_URL=$(yq ".helmCharts[$i].repoUrl" "${CONFIG_FILE}")
-    CHART_NAME=$(yq ".helmCharts[$i].chartName" "${CONFIG_FILE}")
-    CHART_VERSION=$(yq ".helmCharts[$i].chartVersion" "${CONFIG_FILE}")
-    DEST_PATH=$(yq ".helmCharts[$i].destinationPath" "${CONFIG_FILE}")
-
-    check_and_copy_helm \
-        "${REPO_NAME}" \
-        "${REPO_URL}" \
-        "${CHART_NAME}" \
-        "${CHART_VERSION}" \
-        "oci://${REGISTRY_URL}/${DEST_PATH}"
-done
+loop_through_yaml_config_for_helm "${CONFIG_FILE}" "${REGISTRY_URL}"
 
 sleep 1
 echo "Done."
