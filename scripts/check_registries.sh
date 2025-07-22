@@ -1,6 +1,8 @@
 #!/bin/bash
 
-set -e
+set -o errexit
+set -o nounset
+#set -o pipefail
 
 #helm repo add bitnami https://charts.bitnami.com/bitnami
 # helm repo update
@@ -11,7 +13,7 @@ set -e
 # helm pull oci://localhost:5000/charts/nginx
 # helm pull oci://localhost:5000/charts/nginx --version 15.14.0
 
-CONFIG_FILE="/sync-config.yaml"
+readonly CONFIG_FILE="/sync-config.yaml"
 REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
 REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
 REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")

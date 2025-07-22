@@ -1,9 +1,11 @@
 #!/bin/bash
 
-#set -e
-set -eu #o pipefail
+#set -eu
+#set -o pipefail
+set -o errexit
+set -o nounset
 
-CONFIG_FILE="/sync-config.yaml"
+readonly CONFIG_FILE="/sync-config.yaml"
 
 #REGISTRY_CONFIG_FILE="/registry-config.yaml"
 #REGISTRY_URL=$(yq '.registry.url' "${REGISTRY_CONFIG_FILE}")
@@ -24,7 +26,7 @@ REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
 # }
 
 #TODO: add comparing if images are different
-check_and_copy_helm() {
+check_and_sync_helm() {
 	local repo_name="$1"
 	local repo_url="$2"
 	local chart_name="$3"
@@ -59,35 +61,56 @@ check_and_copy_helm() {
 	rm "/tmp/${file_name}.tgz"
 }
 
-check_and_copy_skopeo() {
+check_and_sync_skopeo() {
 	local source_image="$1"
 	local dest_image="$2"
     local version="$3"
 
 	echo "Checking if ${dest_image}:${version} exists in registry..."
 	if skopeo inspect "docker://${dest_image}:${version}" --tls-verify=false >/dev/null 2>&1; then
-		echo "${dest_image}:${version} already exists. Skipping copy."
+		echo "${dest_image}:${version} already exists. Running sync."
+            
+        #will have to think about it
+        skopeo sync \
+            --src docker \
+            --dest docker \
+            "docker://${source_image}:${version}"x \
+            "docker://${dest_image}:${version}" \
+            --dest-tls-verify=false
 		return
 	fi
 
 	echo "${dest_image}:${version} not found. Copying..."
-	skopeo copy "docker://${source_image}:${version}" "docker://${dest_image}:${version}" --dest-tls-verify=false
+	skopeo copy \
+        "docker://${source_image}:${version}" \
+        "docker://${dest_image}:${version}" \
+        --multi-arch all \
+        --dest-precompute-digests \
+        --preserve-digests \
+        --dest-tls-verify=false
 }
 
 loop_through_yaml_config_for_helm() {
 	local config_file="$1"
 	local registry_url="$2"
 
-    local chart_count=$(yq '.helmCharts | length' "${config_file}")
+    local chart_count=0
+    local repo_name=""
+    local repo_url=""
+    local chart_name=""
+    local chart_vertion="" 
+    local dest_path=""
+
+    chart_count=$(yq '.helmCharts | length' "${config_file}")
 
 	for i in $(seq 0 $((chart_count - 1))); do
-		local repo_name=$(yq ".helmCharts[$i].repoName" "${config_file}")
-		local repo_url=$(yq ".helmCharts[$i].repoUrl" "${config_file}")
-		local chart_name=$(yq ".helmCharts[$i].chartName" "${config_file}")
-		local chart_vertion=$(yq ".helmCharts[$i].chartVersion" "${config_file}")
-		local dest_path=$(yq ".helmCharts[$i].destinationPath" "${config_file}")
+		repo_name=$(yq ".helmCharts[$i].repoName" "${config_file}")
+		repo_url=$(yq ".helmCharts[$i].repoUrl" "${config_file}")
+		chart_name=$(yq ".helmCharts[$i].chartName" "${config_file}")
+		chart_vertion=$(yq ".helmCharts[$i].chartVersion" "${config_file}")
+		dest_path=$(yq ".helmCharts[$i].destinationPath" "${config_file}")
 
-		check_and_copy_helm \
+		check_and_sync_helm \
 			"${repo_name}" \
 			"${repo_url}" \
 			"${chart_name}" \
@@ -100,14 +123,19 @@ loop_through_yaml_config_for_skopeo() {
 	local config_file="$1"
 	local registry_url="$2"
 
-    local image_count=$(yq '.dockerImages | length' "${config_file}")
+    local image_count=0
+    local source_image=""
+    local dest_path=""
+    local version=""
+
+    image_count=$(yq '.dockerImages | length' "${config_file}")
 
 	for i in $(seq 0 $((image_count - 1))); do
-		local source_image=$(yq ".dockerImages[$i].source" "${config_file}")
-		local dest_path=$(yq ".dockerImages[$i].destinationPath" "${config_file}")
-        local version=$(yq ".dockerImages[$i].version" "${config_file}")
+		source_image=$(yq ".dockerImages[$i].source" "${config_file}")
+		dest_path=$(yq ".dockerImages[$i].destinationPath" "${config_file}")
+        version=$(yq ".dockerImages[$i].version" "${config_file}")
 
-		check_and_copy_skopeo "${source_image}" "${registry_url}/${dest_path}" "${version}"
+		check_and_sync_skopeo "${source_image}" "${registry_url}/${dest_path}" "${version}"
 	done
 }
 
@@ -121,9 +149,9 @@ loop_through_yaml_config_for_skopeo() {
 
 echo "--- Syncing Docker images ---"
 
-# check_and_copy_skopeo "docker.io/library/alpine" "$REGISTRY_URL/alpine" "3.22"
-# check_and_copy_skopeo "docker.io/library/alpine" "$REGISTRY_URL/alpine" "3.16"
-# check_and_copy_skopeo "docker.io/grafana/grafana" "$REGISTRY_URL/charts/grafana" "12.0.2"
+# check_and_sync_skopeo "docker.io/library/alpine" "$REGISTRY_URL/alpine" "3.22"
+# check_and_sync_skopeo "docker.io/library/alpine" "$REGISTRY_URL/alpine" "3.16"
+# check_and_sync_skopeo "docker.io/grafana/grafana" "$REGISTRY_URL/charts/grafana" "12.0.2"
 
 loop_through_yaml_config_for_skopeo "${CONFIG_FILE}" "${REGISTRY_URL}"
 
@@ -134,8 +162,8 @@ loop_through_yaml_config_for_helm "${CONFIG_FILE}" "${REGISTRY_URL}"
 sleep 1
 echo "Done."
 
-/test_functions.sh
-#exec /validate_sync.sh
+/check_registries.sh
+exec /validate_manifests.sh
 
 #/remove_yaml_entry.sh image --source "docker.io/library/alpine:3.22"
 #/add_yaml_entry.sh image --source "docker.io/library/alpine:3.22" --destination "images/alpine:3.22"

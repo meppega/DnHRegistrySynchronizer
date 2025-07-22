@@ -2,11 +2,13 @@
 # Script to remove a Docker image or Helm chart entry from sync-config.yaml automatically.
 # This script assumes all required parameters are provided via command-line arguments.
 
-set -e
+set -o errexit
+set -o nounset
+#set -o pipefail
 
 # Use the full path for CONFIG_FILE as mounted in Docker Compose
 # If you mount to /app/sync-config.yaml in docker-compose.yml:
-CONFIG_FILE="/sync-config.yaml"
+readonly CONFIG_FILE="/sync-config.yaml"
 # If you mount to /sync-config.yaml in docker-compose.yml:
 # CONFIG_FILE="/sync-config.yaml"
 

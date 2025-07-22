@@ -1,9 +1,11 @@
 #!/bin/bash
 # Script to add a Docker image or Helm chart entry to sync-config.yaml
 
-set -e
+set -o errexit
+set -o nounset
+#set -o pipefail
 
-CONFIG_FILE="/sync-config.yaml"
+readonly CONFIG_FILE="/sync-config.yaml"
 
 # Function to display usage instructions
 usage() {

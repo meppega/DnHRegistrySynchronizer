@@ -6,7 +6,8 @@ services:
       - "5000:5000"
     profiles:
       - registry
-    #environment:
+    environment:
+      REGISTRY_HTTP_SECRET: admin
     #   # --- Basic Authentication Configuration ---
     #   REGISTRY_AUTH: htpasswd
     #   REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"
@@ -27,10 +28,14 @@ services:
     container_name: skopeo
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./scripts/sync-skopeo.sh:/sync.sh
+      - ./scripts/sync_registries.sh:/sync_registries.sh
+      - ./scripts/check_registries.sh:/check_registries.sh
+      - ./scripts/validate_manifests.sh:/validate_manifests.sh
+      - ./scripts/add_yaml_entry.sh:/add_yaml_entry.sh
+      - ./scripts/remove_yaml_entry.sh:/remove_yaml_entry.sh
       - ./config/sync-config.yaml:/sync-config.yaml
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
-    entrypoint: ["sh", "/sync.sh"]
+    entrypoint: ["sh", "/sync_registries.sh"]
     # depends_on:
     #  - registry
     profiles:
@@ -44,14 +49,14 @@ services:
     container_name: actions-runner
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./scripts/sync_registries.sh:/sync.sh
-      - ./scripts/test_functions.sh:/test_functions.sh
-      - ./scripts/validate_sync.sh:/validate_sync.sh
+      - ./scripts/sync_registries.sh:/sync_registries.sh
+      - ./scripts/check_registries.sh:/check_registries.sh
+      - ./scripts/validate_manifests.sh:/validate_manifests.sh
       - ./scripts/add_yaml_entry.sh:/add_yaml_entry.sh
       - ./scripts/remove_yaml_entry.sh:/remove_yaml_entry.sh
       - ./config/sync-config.yaml:/sync-config.yaml
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
-    entrypoint: ["sh", "/sync.sh"]
+    entrypoint: ["sh", "/sync_registries.sh"]
     # depends_on:
     #  - registry
     profiles:

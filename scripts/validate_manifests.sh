@@ -1,9 +1,11 @@
 #!/bin/bash
 # Script to validate synchronized Docker images and Helm charts by comparing SHA256 digests
 
-set -e
+set -o errexit
+set -o nounset
+#set -o pipefail
 
-CONFIG_FILE="/sync-config.yaml"
+readonly CONFIG_FILE="/sync-config.yaml"
 
 REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
 REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
@@ -60,7 +62,7 @@ validate_skopeo() {
 	# Validate Docker Images
 	echo ""
 	echo "--- Validating Docker Images ---"
-	image_count=$(yq '.dockerImages | length' "${CONFIG_FILE}")
+	local image_count=$(yq '.dockerImages | length' "${CONFIG_FILE}")
 	if [ "${image_count}" -eq 0 ]; then
 		echo "  No Docker images configured for synchronization."
 		return
