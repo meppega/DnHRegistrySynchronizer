@@ -5,9 +5,9 @@ set -e
 
 CONFIG_FILE="/sync-config.yaml"
 
-REGISTRY_URL="registry:5000"
-# REGISTRY_USER="admin"
-# REGISTRY_PASS="admin"
+REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
+REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
+REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
 
 # Function to get Docker image SHA256 digest using skopeo inspect
 # Arguments:

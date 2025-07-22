@@ -62,15 +62,16 @@ check_and_copy_helm() {
 check_and_copy_skopeo() {
 	local source_image="$1"
 	local dest_image="$2"
+    local version="$3"
 
-	echo "Checking if $dest_image exists in registry..."
-	if skopeo inspect "docker://${dest_image}" --tls-verify=false >/dev/null 2>&1; then
-		echo "$dest_image already exists. Skipping copy."
+	echo "Checking if ${dest_image}:${version} exists in registry..."
+	if skopeo inspect "docker://${dest_image}:${version}" --tls-verify=false >/dev/null 2>&1; then
+		echo "${dest_image}:${version} already exists. Skipping copy."
 		return
 	fi
 
-	echo "${dest_image} not found. Copying..."
-	skopeo copy "docker://${source_image}" "docker://${dest_image}" --dest-tls-verify=false
+	echo "${dest_image}:${version} not found. Copying..."
+	skopeo copy "docker://${source_image}:${version}" "docker://${dest_image}:${version}" --dest-tls-verify=false
 }
 
 loop_through_yaml_config_for_helm() {
@@ -104,8 +105,9 @@ loop_through_yaml_config_for_skopeo() {
 	for i in $(seq 0 $((image_count - 1))); do
 		local source_image=$(yq ".dockerImages[$i].source" "${config_file}")
 		local dest_path=$(yq ".dockerImages[$i].destinationPath" "${config_file}")
+        local version=$(yq ".dockerImages[$i].version" "${config_file}")
 
-		check_and_copy_skopeo "${source_image}" "${registry_url}/${dest_path}"
+		check_and_copy_skopeo "${source_image}" "${registry_url}/${dest_path}" "${version}"
 	done
 }
 
@@ -119,9 +121,9 @@ loop_through_yaml_config_for_skopeo() {
 
 echo "--- Syncing Docker images ---"
 
-# check_and_copy_skopeo "docker.io/library/alpine:3.22" "$REGISTRY_URL/alpine:3.22"
-# check_and_copy_skopeo "docker.io/library/alpine:3.16" "$REGISTRY_URL/alpine:3.16"
-# check_and_copy_skopeo "docker.io/grafana/grafana:12.0.2" "$REGISTRY_URL/charts/grafana:12.0.2"
+# check_and_copy_skopeo "docker.io/library/alpine" "$REGISTRY_URL/alpine" "3.22"
+# check_and_copy_skopeo "docker.io/library/alpine" "$REGISTRY_URL/alpine" "3.16"
+# check_and_copy_skopeo "docker.io/grafana/grafana" "$REGISTRY_URL/charts/grafana" "12.0.2"
 
 loop_through_yaml_config_for_skopeo "${CONFIG_FILE}" "${REGISTRY_URL}"
 

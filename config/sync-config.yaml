@@ -1,17 +1,17 @@
-# Registry Configuration
 registry:
   url: registry:5000
   user: admin
   password: admin
-# Docker Images to Synchronize
 dockerImages:
-  # - source: docker.io/library/alpine:3.16
-  #   destinationPath: images/alpine:3.16
-  - source: docker.io/grafana/grafana:11.6.1
-    destinationPath: images/grafana:12.0.2
-  # - source: docker.io/library/alpine:3.22
-  #   destinationPath: images/alpine:3.22
-# Helm Charts to Synchronize
+  # - source: docker.io/library/alpine
+  #   destinationPath: images/alpine
+  #   version: 3.16
+  - source: docker.io/grafana/grafana
+    destinationPath: images/grafana
+    version: 12.0.2
+  # - source: docker.io/library/alpine
+  #   destinationPath: images/alpine
+  #   version: 3.22
 helmCharts:
   - repoName: bitnami
     repoUrl: https://charts.bitnami.com/bitnami
