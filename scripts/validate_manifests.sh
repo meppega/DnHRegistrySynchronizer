@@ -54,6 +54,12 @@ get_tgz_sha256() {
 # Main validation logic function
 validate_skopeo() {
 	echo "--- Starting Sync Validation ---"
+	local image_count=0
+	local source_image=""
+	local dest_path=""
+	local dest_image=""
+	local source_digest=""
+	local dest_digest=""
 
 	# Log in to the local registry for Skopeo and Helm to ensure access
 	echo "  > Logging into local registry: ${REGISTRY_URL}..."
@@ -62,43 +68,55 @@ validate_skopeo() {
 	# Validate Docker Images
 	echo ""
 	echo "--- Validating Docker Images ---"
-	local image_count=$(yq '.dockerImages | length' "${CONFIG_FILE}")
+	image_count=$(yq '.dockerImages | length' "${CONFIG_FILE}")
 	if [ "${image_count}" -eq 0 ]; then
 		echo "  No Docker images configured for synchronization."
 		return
 	fi
 
 	for i in $(seq 0 $((image_count - 1))); do
-		SOURCE_IMAGE=$(yq ".dockerImages[$i].source" "${CONFIG_FILE}")
-		DEST_PATH=$(yq ".dockerImages[$i].destinationPath" "${CONFIG_FILE}")
-		DEST_IMAGE="${REGISTRY_URL}/${DEST_PATH}"
+		source_image=$(yq ".dockerImages[$i].source" "${CONFIG_FILE}")
+		dest_path=$(yq ".dockerImages[$i].destinationPath" "${CONFIG_FILE}")
+		dest_image="${REGISTRY_URL}/${dest_path}"
 
-		echo "Checking image: ${SOURCE_IMAGE} -> ${DEST_IMAGE}"
+		echo "Checking image: ${source_image} -> ${dest_image}"
 
 		# Get digest for source image (assuming public registries don't need --tls-verify=false)
-		SOURCE_DIGEST=$(get_docker_image_digest "${SOURCE_IMAGE}" "--tls-verify=true")
+		source_digest=$(get_docker_image_digest "${source_image}" "--tls-verify=true")
 		# Get digest for destination image (using --tls-verify=false for local registry)
-		DEST_DIGEST=$(get_docker_image_digest "${DEST_IMAGE}" "--tls-verify=false")
+		dest_digest=$(get_docker_image_digest "${dest_image}" "--tls-verify=false")
 
-		if [ -z "${SOURCE_DIGEST}" ]; then
+		if [ -z "${source_digest}" ]; then
 			echo "  Status: SKIP (Source image digest not found, possibly due to access or non-existence)"
-		elif [ -z "${DEST_DIGEST}" ]; then
+		elif [ -z "${dest_digest}" ]; then
 			echo "  Status: FAIL (Destination image digest not found - image might be missing in local registry)"
-		elif [ "${SOURCE_DIGEST}" = "${DEST_DIGEST}" ]; then
-			echo "  Status: PASS (Digests match: ${SOURCE_DIGEST})"
+		elif [ "${source_digest}" = "${dest_digest}" ]; then
+			echo "  Status: PASS (Digests match: ${source_digest})"
 		else
 			echo "  Status: FAIL (Digests mismatch)"
-			echo "    Source: ${SOURCE_DIGEST}"
-			echo "    Dest:   ${DEST_DIGEST}"
+			echo "    Source: ${source_digest}"
+			echo "    Dest:   ${dest_digest}"
 		fi
 		echo ""
 	done
 }
 
+#TODO: separate files for verification
 validate_helm() {
 	# Validate Helm Charts
 	# Helm registry login (using --plain-http for insecure local registry)
 	#helm registry login "${REGISTRY_URL}" --username "${REGISTRY_USER}" --password "${REGISTRY_PASS}" --plain-http || { echo "Helm registry login failed."; exit 1; }
+
+	local chart_count=0
+	local repo_url
+	local chart_name
+	local chart_version
+	local dest_path
+	local dest_oci_url
+	local source_chart_file
+	local existing_chart_file
+	local source_sha
+	local dest_sha
 
 	echo ""
 	echo "--- Validating Helm Charts ---"
@@ -108,64 +126,60 @@ validate_helm() {
 		return
 	fi
 
-	# Create a temporary directory for chart downloads
-	TEMP_DIR=$(mktemp -d -t helm-charts-validation-XXXXXXXX)
-	echo "  > Using temporary directory for Helm charts: ${TEMP_DIR}"
-
 	for i in $(seq 0 $((chart_count - 1))); do
-		# REPO_NAME=$(yq ".helmCharts[$i].repoName" "${CONFIG_FILE}")
-		REPO_URL=$(yq ".helmCharts[$i].repoUrl" "${CONFIG_FILE}")
-		CHART_NAME=$(yq ".helmCharts[$i].chartName" "${CONFIG_FILE}")
-		CHART_VERSION=$(yq ".helmCharts[$i].chartVersion" "${CONFIG_FILE}")
-		DEST_PATH=$(yq ".helmCharts[$i].destinationPath" "${CONFIG_FILE}")
+		# repo_name=$(yq ".helmCharts[$i].repoName" "${CONFIG_FILE}")
+		repo_url=$(yq ".helmCharts[$i].repoUrl" "${CONFIG_FILE}")
+		chart_name=$(yq ".helmCharts[$i].chartName" "${CONFIG_FILE}")
+		chart_version=$(yq ".helmCharts[$i].chartVersion" "${CONFIG_FILE}")
+		dest_path=$(yq ".helmCharts[$i].destinationPath" "${CONFIG_FILE}")
 
 		# Construct destination OCI URL (e.g., oci://registry:5000/charts/nginx)
-		DEST_OCI_URL="oci://${REGISTRY_URL}/${DEST_PATH}${CHART_NAME}"
+		dest_oci_url="oci://${REGISTRY_URL}/${dest_path}${chart_name}"
 
-		echo "Checking chart: ${REPO_URL}/${CHART_NAME}:${CHART_VERSION} -> ${DEST_OCI_URL}:${CHART_VERSION}"
+		echo "Checking chart: ${repo_url}/${chart_name}:${chart_version} -> ${dest_oci_url}:${chart_version}"
 
-		SOURCE_CHART_FILE="${TEMP_DIR}/${CHART_NAME}-${CHART_VERSION}.tgz"
+		source_chart_file="${temp_dir}/${chart_name}-${chart_version}.tgz"
 		# Helm pull from OCI also names the file chartname-version.tgz
 
 		# Pull source chart to a unique temporary file
-		echo "  > Pulling source chart from ${REPO_URL}..."
-		if helm pull "${CHART_NAME}" --repo "${REPO_URL}" --version "${CHART_VERSION}" --destination "${TEMP_DIR}" --untar=false >/dev/null 2>&1; then
-			SOURCE_SHA=$(get_tgz_sha256 "${SOURCE_CHART_FILE}")
+		echo "  > Pulling source chart from ${repo_url}..."
+		if helm pull "${chart_name}" --repo "${repo_url}" --version "${chart_version}" --destination "/tmp" --untar=false >/dev/null 2>&1; then
+			source_sha=$(get_tgz_sha256 "${source_chart_file}")
 		else
-			echo "    Warning: Failed to pull source chart ${CHART_NAME}:${CHART_VERSION} from ${REPO_URL}. Skipping validation for this chart." >&2
-			SOURCE_SHA=""
+			echo "    Warning: Failed to pull source chart ${chart_name}:${chart_version} from ${repo_url}. Skipping validation for this chart." >&2
+			source_sha=""
 		fi
 
-		rm "${SOURCE_CHART_FILE}"
+		rm "${source_chart_file}"
 
 		# Pull destination chart from OCI registry to a *different* unique temporary file
-		echo "  > Pulling destination chart from ${DEST_OCI_URL}..."
+		echo "  > Pulling destination chart from ${dest_oci_url}..."
 		# Create a distinct file name for the destination chart to avoid conflicts
-		# LOCAL_DEST_CHART_FILE="${TEMP_DIR}/dest_${CHART_NAME}-${CHART_VERSION}.tgz"
-		if helm pull "${DEST_OCI_URL}" --version "${CHART_VERSION}" --destination "${TEMP_DIR}" --plain-http --untar=false >/dev/null 2>&1; then
-			DEST_SHA=$(get_tgz_sha256 "${SOURCE_CHART_FILE}")
+		# LOCAL_DEST_CHART_FILE="${temp_dir}/dest_${chart_name}-${chart_version}.tgz"
+		if helm pull "${dest_oci_url}" --version "${chart_version}" --destination "/tmp" --plain-http --untar=false >/dev/null 2>&1; then
+			dest_sha=$(get_tgz_sha256 "${source_chart_file}")
 		else
-			echo "    Warning: Failed to pull destination chart ${CHART_NAME}:${CHART_VERSION} from ${DEST_OCI_URL}. It might be missing in the local registry." >&2
-			DEST_SHA=""
+			echo "    Warning: Failed to pull destination chart ${chart_name}:${chart_version} from ${dest_oci_url}. It might be missing in the local registry." >&2
+			dest_sha=""
 		fi
 
-		if [ -z "${SOURCE_SHA}" ]; then
+		if [ -z "${source_sha}" ]; then
 			echo "  Status: SKIP (Source chart digest could not be determined)"
-		elif [ -z "${DEST_SHA}" ]; then
+		elif [ -z "${dest_sha}" ]; then
 			echo "  Status: FAIL (Destination chart digest could not be determined - chart might be missing)"
-		elif [ "${SOURCE_SHA}" = "${DEST_SHA}" ]; then
-			echo "  Status: PASS (Digests match: ${SOURCE_SHA})"
+		elif [ "${source_sha}" = "${dest_sha}" ]; then
+			echo "  Status: PASS (Digests match: ${source_sha})"
 		else
 			echo "  Status: FAIL (Digests mismatch)"
-			echo "    Source: ${SOURCE_SHA}"
-			echo "    Dest:   ${DEST_SHA}"
+			echo "    Source: ${source_sha}"
+			echo "    Dest:   ${dest_sha}"
 		fi
 		echo ""
 	done
 
 	# Clean up temporary directory
-	echo "  > Cleaning up temporary directory: ${TEMP_DIR}"
-	rm -rf "${TEMP_DIR}"
+	echo "  > Cleaning up temporary directory"
+	rm -f "/tmp/*.tgz"
 }
 
 # Run validation

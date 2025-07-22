@@ -58,7 +58,7 @@ check_and_sync_helm() {
 		"${dest_repo}" \
 		--plain-http
 
-	rm "/tmp/${file_name}.tgz"
+	rm -f "/tmp/*.tgz"
 }
 
 check_and_sync_skopeo() {
@@ -84,10 +84,10 @@ check_and_sync_skopeo() {
 	skopeo copy \
         "docker://${source_image}:${version}" \
         "docker://${dest_image}:${version}" \
-        --multi-arch all \
-        --dest-precompute-digests \
-        --preserve-digests \
         --dest-tls-verify=false
+        #--preserve-digests \
+        #\ --multi-arch all \
+        # --dest-precompute-digests
 }
 
 loop_through_yaml_config_for_helm() {
