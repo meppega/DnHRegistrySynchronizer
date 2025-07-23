@@ -47,21 +47,27 @@ if [ ! -f "${CONFIG_FILE}" ]; then
 fi
 
 # Parse the type of entry to add
-ENTRY_TYPE="$1"
+local entry_type="$1"
 shift # Remove the first argument (type)
 
-case "${ENTRY_TYPE}" in
+case "${entry_type}" in
 image)
-	SOURCE_IMAGE=""
-	DEST_PATH=""
+	local source_image=""
+	local dest_path=""
+	local version=""
+
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		--source)
-			SOURCE_IMAGE="$2"
+			source_image="$2"
 			shift
 			;;
 		--destination)
-			DEST_PATH="$2"
+			dest_path="$2"
+			shift
+			;;
+		--version)
+			version="$2"
 			shift
 			;;
 		*)
@@ -72,41 +78,46 @@ image)
 		shift
 	done
 
-	if [ -z "${SOURCE_IMAGE}" ] || [ -z "${DEST_PATH}" ]; then
+	if [ -z "${source_image}" ] || [ -z "${dest_path}" ]; then
 		echo "Error: --source and --destination are required for image entries."
 		usage
+		exit 1
 	fi
 
-	echo "Adding Docker image entry: Source=${SOURCE_IMAGE}, Destination=${DEST_PATH}"
-	yq e ".dockerImages += [{\"source\": \"${SOURCE_IMAGE}\", \"destinationPath\": \"${DEST_PATH}\"}]" -i "${CONFIG_FILE}"
+	if [ -z "${version}" ]; then
+		version="latest"
+	fi
+
+	echo "Adding Docker image entry: Source=${source_image}, Destination=${dest_path}, Version=${latest}"
+	yq e ".dockerImages += [{\"source\": \"${source_image}\", \"destinationPath\": \"${dest_path}\"}, \"version\": \"${version}\"}]" -i "${CONFIG_FILE}"
 	echo "Docker image added successfully."
 	;;
 chart)
-	REPO_NAME=""
-	REPO_URL=""
-	CHART_NAME=""
-	CHART_VERSION=""
-	DEST_PATH=""
+	local repo_name=""
+	local repo_url=""
+	local chart_name=""
+	local chart_version=""
+	local dest_path=""
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		--repo-name)
-			REPO_NAME="$2"
+			repo_name="$2"
 			shift
 			;;
 		--repo-url)
-			REPO_URL="$2"
+			repo_url="$2"
 			shift
 			;;
 		--chart-name)
-			CHART_NAME="$2"
+			chart_name="$2"
 			shift
 			;;
 		--chart-version)
-			CHART_VERSION="$2"
+			chart_version="$2"
 			shift
 			;;
 		--destination)
-			DEST_PATH="$2"
+			dest_path="$2"
 			shift
 			;;
 		*)
@@ -117,13 +128,13 @@ chart)
 		shift
 	done
 
-	if [ -z "${REPO_NAME}" ] || [ -z "${REPO_URL}" ] || [ -z "${CHART_NAME}" ] || [ -z "${CHART_VERSION}" ] || [ -z "${DEST_PATH}" ]; then
+	if [ -z "${repo_name}" ] || [ -z "${repo_url}" ] || [ -z "${chart_name}" ] || [ -z "${chart_version}" ] || [ -z "${dest_path}" ]; then
 		echo "Error: All chart options (--repo-name, --repo-url, --chart-name, --chart-version, --destination) are required for chart entries."
 		usage
 	fi
 
-	echo "Adding Helm chart entry: RepoName=${REPO_NAME}, RepoUrl=${REPO_URL}, ChartName=${CHART_NAME}, ChartVersion=${CHART_VERSION}, Destination=${DEST_PATH}"
-	yq e ".helmCharts += [{\"repoName\": \"${REPO_NAME}\", \"repoUrl\": \"${REPO_URL}\", \"chartName\": \"${CHART_NAME}\", \"chartVersion\": \"${CHART_VERSION}\", \"destinationPath\": \"${DEST_PATH}\"}]" -i "${CONFIG_FILE}"
+	echo "Adding Helm chart entry: RepoName=${repo_name}, RepoUrl=${repo_url}, ChartName=${chart_name}, ChartVersion=${chart_version}, Destination=${dest_path}"
+	yq e ".helmCharts += [{\"repoName\": \"${repo_name}\", \"repoUrl\": \"${repo_url}\", \"chartName\": \"${chart_name}\", \"chartVersion\": \"${chart_version}\", \"destinationPath\": \"${dest_path}\"}]" -i "${CONFIG_FILE}"
 	echo "Helm chart added successfully."
 	;;
 *)
