@@ -61,3 +61,14 @@ services:
     #  - registry
     profiles:
       - runner
+
+  charts-syncer:
+    image: bitnami/charts-syncer:latest
+    container_name: charts-syncer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./charts-syncer/charts-syncer.yaml:/charts-syncer.yaml
+      - ./charts-syncer/registries.conf:/etc/containers/registries.conf:ro
+    command: ["sync", "--insecure", "--config", "/charts-syncer.yaml","-v","3"]
+    profiles:
+      - syncer
