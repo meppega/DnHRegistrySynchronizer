@@ -138,7 +138,7 @@ validate_helm() {
 
 		echo "Checking chart: ${repo_url}/${chart_name}:${chart_version} -> ${dest_oci_url}:${chart_version}"
 
-		source_chart_file="${temp_dir}/${chart_name}-${chart_version}.tgz"
+		source_chart_file="/tmp/${chart_name}-${chart_version}.tgz"
 		# Helm pull from OCI also names the file chartname-version.tgz
 
 		# Pull source chart to a unique temporary file

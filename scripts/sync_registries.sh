@@ -5,21 +5,21 @@
 set -o errexit
 set -o nounset
 
-readonly CONFIG_FILE="/sync-config.yaml"
-
-#REGISTRY_CONFIG_FILE="/registry-config.yaml"
-#REGISTRY_URL=$(yq '.registry.url' "${REGISTRY_CONFIG_FILE}")
+CONFIG_FILE="/ARISU/config/sync-config.yaml"
 
 REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
 REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
 REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
 
+. "/ARISU/scripts/remove_yaml_entries.sh"
+
 # Function to check if all necessary dependencies are installed
 # check_dependencies() {
 #     local deps=("yq" "skopeo" "helm" "curl" "jq" "sha256sum")
 #     for dep in "${deps[@]}"; do
-#         if ! command -v "$dep" &> /dev/null; then
-#             echo "Error: Required command '$dep' is not installed. Please install it."
+#         if ! command -v "${dep}" &> /dev/null; then
+#             echo "${LINENO}: Error: Required command '$dep' \
+# 				is not installed. Please install it."
 #             exit 1
 #         fi
 #     done
@@ -66,17 +66,17 @@ check_and_sync_skopeo() {
 	local dest_image="$2"
     local version="$3"
 
-	echo "Checking if ${dest_image}:${version} exists in registry..."
+	echo "Checking if ${dest_image} : ${version} exists in registry..."
 	if skopeo inspect "docker://${dest_image}:${version}" --tls-verify=false >/dev/null 2>&1; then
 		echo "${dest_image}:${version} already exists. Running sync."
             
-        #will have to think about it
-        skopeo sync \
-            --src docker \
-            --dest docker \
-            "docker://${source_image}:${version}"x \
-            "docker://${dest_image}:${version}" \
-            --dest-tls-verify=false
+        #TODO: add yaml file for synchronization
+        # skopeo sync \
+        #     --src docker \
+        #     --dest docker \
+        #     "docker://${source_image}:${version}" \
+        #     "docker://${dest_image}:${version}" \
+        #     --dest-tls-verify=false
 		return
 	fi
 
@@ -162,19 +162,23 @@ loop_through_yaml_config_for_helm "${CONFIG_FILE}" "${REGISTRY_URL}"
 sleep 1
 echo "Done."
 
-/check_registries.sh
-exec /validate_manifests.sh
+# /check_registries.sh
+# exec /validate_manifests.sh
 
-#/remove_yaml_entry.sh image --source "docker.io/library/alpine:3.22"
-#/add_yaml_entry.sh image --source "docker.io/library/alpine:3.22" --destination "images/alpine:3.22"
+remove_yaml_entries "${CONFIG_FILE}" image \
+	--registry-path "images/alpine" \
+	--version "3.22"
+/ARISU/scripts/add_yaml_entries.sh image \
+	--source "docker.io/library/alpine:3.22" \
+	--destination "images/alpine" \
+	--version "3.22"
 
-# /remove_yaml_entry.sh chart \
-#     --chart-name "nginx" \
-#     --chart-version "15.14.0"
-
-# /add_yaml_entry.sh chart \
-#     --repo-name "bitnami" \
-#     --repo-url "https://charts.bitnami.com/bitnami" \
-#     --chart-name "nginx" \
-#     --chart-version "15.14.0" \
-#     --destination "charts/"
+remove_yaml_entries "${CONFIG_FILE}" chart \
+    --chart-name "nginx" \
+    --chart-version "15.14.0"
+/ARISU/scripts/add_yaml_entries.sh chart \
+    --repo-name "bitnami" \
+    --repo-url "https://charts.bitnami.com/bitnami" \
+    --chart-name "nginx" \
+    --chart-version "15.14.0" \
+    --destination "charts/"

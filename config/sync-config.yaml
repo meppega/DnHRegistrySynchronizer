@@ -3,9 +3,9 @@ registry:
   user: admin
   password: admin
 dockerImages:
-  # - source: docker.io/library/alpine
-  #   destinationPath: images/alpine
-  #   version: 3.16
+  - source: docker.io/library/alpine
+    destinationPath: images/alpine
+    version: 3.22
   - source: docker.io/grafana/grafana
     destinationPath: images/grafana
     version: 12.0.2
