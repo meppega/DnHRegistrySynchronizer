@@ -13,17 +13,18 @@ REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
 
 . "/ARISU/scripts/remove_yaml_entries.sh"
 
-# Function to check if all necessary dependencies are installed
-# check_dependencies() {
-#     local deps=("yq" "skopeo" "helm" "curl" "jq" "sha256sum")
-#     for dep in "${deps[@]}"; do
-#         if ! command -v "${dep}" &> /dev/null; then
-#             echo "${LINENO}: Error: Required command '$dep' \
-# 				is not installed. Please install it."
-#             exit 1
-#         fi
-#     done
-# }
+#Function to check if all necessary dependencies are installed
+check_dependencies() {
+    local deps=("yq" "skopeo" "helm" "curl" "jq" "sha256sum")
+    for dep in "${deps[@]}"; do
+        if ! command -v "${dep}" &> /dev/null; then
+            echo "${LINENO}: Error: Required command '$dep' \
+				is not installed. Please install it."
+            exit 1
+        fi
+    done
+	echo "All dependencies present"
+}
 
 #TODO: add comparing if images are different
 check_and_sync_helm() {
@@ -140,7 +141,7 @@ loop_through_yaml_config_for_skopeo() {
 }
 
 # Run dependency check
-# check_dependencies
+check_dependencies
 
 # logging skopeo in
 #echo "$REGISTRY_PASS" | skopeo login "$REGISTRY_URL" --username "$REGISTRY_USER" --password-stdin

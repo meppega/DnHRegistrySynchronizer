@@ -1,0 +1,16 @@
+name: greetings
+
+on: [pull_request_target, issues]
+
+jobs:
+  greetings:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    stages:
+    - uses: actions/first-interaction@v1
+      with:
+        repo-token: $({ secrets.GITHUB_TOKEN})
+        issue-message: "Greetings"
+        pr-message: "Greetings and hello"

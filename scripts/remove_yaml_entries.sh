@@ -13,12 +13,6 @@ remove_yaml_entries() {
 	local entry_type="$2"
 	shift 2 # Remove two arguments
 
-	# Check if yq is installed
-	# if ! command -v yq &>/dev/null; then
-	# 	echo "Error: yq is not installed. Please install it to use this script."
-	# 	exit 1
-	# fi
-
 	# Check if config file exists
 	if [ ! -f "${config_file}" ]; then
 		echo "Error: Configuration file ${config_file} not found."
@@ -52,8 +46,8 @@ remove_yaml_entries() {
 
 		# Validate source_image is not empty
 		if [ -z "${img_reg_path}" ] || [ -z "${img_version}" ]; then
-			echo "Error: --registry-path and --version are required for image type." >&2
-			exit 1
+			echo "Error: --registry-path and --version are required for image type. Skipping deletion." >&2
+			return
 		fi
 
 		echo "Attempting to remove Docker image entry with source: ${img_reg_path}"
@@ -62,8 +56,8 @@ remove_yaml_entries() {
 		image_indices=$(yq e '.dockerImages | to_entries | .[] | select(.value.destinationPath == "'"${img_reg_path}"'" and .value.version == "'"${img_version}"'") | .key' "${config_file}")
 
 		if [ -z "${image_indices}" ]; then # Check for empty string, as 'null' is not output by this yq
-			echo "Error: Docker image with source '${img_reg_path}':'${img_version}' not found in ${config_file}." >&2
-			exit 1
+			echo "Docker image with source '${img_reg_path}':'${img_version}' not found in ${config_file}. Skipping deletion." >&2
+			return
 		else
 			echo "Found image(s) at index(es): ${image_indices}. Deleting..."
 			# Loop through indices in reverse order
@@ -104,8 +98,8 @@ remove_yaml_entries() {
 
 		# Validate chart_name and chart_version are not empty
 		if [ -z "${chart_name}" ] || [ -z "${chart_version}" ]; then
-			echo "Error: --chart-name and --chart-version are required for chart type." >&2
-			exit 1
+			echo "Error: --chart-name and --chart-version are required for chart type. Skipping deletion." >&2
+			return
 		fi
 
 		echo "Attempting to remove Helm chart entry: ChartName=${chart_name}, ChartVersion=${chart_version}"
@@ -114,8 +108,8 @@ remove_yaml_entries() {
 		chart_indices=$(yq e '.helmCharts | to_entries | .[] | select(.value.chartName == "'"${chart_name}"'" and .value.chartVersion == "'"${chart_version}"'") | .key' "${config_file}")
 
 		if [ -z "${chart_indices}" ]; then # Check for empty string
-			echo "Error: Helm chart with name '${chart_name}' and version '${chart_version}' not found in ${config_file}." >&2
-			exit 1
+			echo "Helm chart with name '${chart_name}' and version '${chart_version}' not found in ${config_file}. Skipping deletion." >&2
+			return
 		else
 			echo "Found chart(s) at index(es): ${chart_indices}. Deleting..."
 			# Loop through indices in reverse order
@@ -132,8 +126,8 @@ remove_yaml_entries() {
 		fi
 		;;
 	*)
-		echo "Error: Invalid entry type '${entry_type}'. Must be 'image' or 'chart'." >&2
-		exit 1
+		echo "Error: Invalid entry type '${entry_type}'. Must be 'image' or 'chart'. skipping." >&2
+		return
 		;;
 	esac
 
@@ -143,7 +137,7 @@ remove_yaml_entries() {
 
 RUNNING="$(basename $0)"
 
-if [[ "$RUNNING" == "remove_yaml_entries" ]]
+if [ "$RUNNING" = "remove_yaml_entries" ]
 then
-  remove_yaml_entries "$@"
+    remove_yaml_entries "$@"
 fi
