@@ -34,15 +34,18 @@ add_yaml_entries() {
 	local entry_type="$2"
 	shift 2 # Remove two arguments
 
+	echo "bababoya 2"
 	# Check if config file exists
 	if [ ! -f "${config_file}" ]; then
 		echo "Configuration file ${config_file} not found."
 		return 1
 	fi
 
-	# Parse the type of entry to add
-	local entry_type="$1"
-	shift # Remove the first argument (type)
+	    # Ensure yq is installed
+    if ! command -v yq &> /dev/null; then
+        echo "Error: yq is not installed. Please install it to manipulate YAML." >&2
+        return 1
+    fi
 
 	case "${entry_type}" in
 	image)
@@ -82,7 +85,7 @@ add_yaml_entries() {
 		fi
 
 		echo "Adding Docker image entry: Source=${source_image}, Destination=${dest_path}, Version=${version}"
-		yq e ".dockerImages += [{\"source\": \"${source_image}\", \"destinationPath\": \"${dest_path}\"}, \"version\": \"${version}\"}]" -i "${config_file}"
+		yq e ".dockerImages = (.dockerImages // []) + [{\"source\": \"${source_image}\", \"destinationPath\": \"${dest_path}\", \"version\": \"${version}\"}]" -i "${config_file}"
 		echo "Docker image added successfully."
 		;;
 	chart)
@@ -127,7 +130,8 @@ add_yaml_entries() {
 		fi
 
 		echo "Adding Helm chart entry: RepoName=${repo_name}, RepoUrl=${repo_url}, ChartName=${chart_name}, ChartVersion=${chart_version}, Destination=${dest_path}"
-		yq e ".helmCharts += [{\"repoName\": \"${repo_name}\", \"repoUrl\": \"${repo_url}\", \"chartName\": \"${chart_name}\", \"chartVersion\": \"${chart_version}\", \"destinationPath\": \"${dest_path}\"}]" -i "${config_file}"
+		#yq e ".helmCharts += [{\"repoName\": \"${repo_name}\", \"repoUrl\": \"${repo_url}\", \"chartName\": \"${chart_name}\", \"chartVersion\": \"${chart_version}\", \"destinationPath\": \"${dest_path}\"}]" -i "${config_file}"
+		yq e ".helmCharts = (.helmCharts // []) + [{\"repoName\": \"${repo_name}\", \"repoUrl\": \"${repo_url}\", \"chartName\": \"${chart_name}\", \"chartVersion\": \"${chart_version}\", \"destinationPath\": \"${dest_path}\"}]" -i "${config_file}"
 		echo "Helm chart added successfully."
 		;;
 	*)
@@ -136,12 +140,13 @@ add_yaml_entries() {
 	esac
 
 	echo "Updated ${config_file}:"
-	cat "${config_file}"
+	# cat "${config_file}"
 }
 
-RUNNING="$(basename $0)"
+RUNNING="$(basename "$0")"
 
 if [ "$RUNNING" = "add_yaml_entries" ]
 then
+	echo "bababoya 1"
     add_yaml_entries "$@"
 fi

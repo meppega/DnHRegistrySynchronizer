@@ -12,12 +12,12 @@ REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
 REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
 
 # Includes
-. "/ARISU/scripts/remove_yaml_entries.sh"
-. "/ARISU/scripts/add_yaml_entries.sh"
+source "/ARISU/scripts/remove_yaml_entries.sh"
+source "/ARISU/scripts/add_yaml_entries.sh"
 
 #Function to check if all necessary dependencies are installed
 check_dependencies() {
-    local deps=("yq" "skopeo" "helm" "curl" "jq" "sha256sum")
+    local deps=("yq" "skopeo" "helm" "curl" "yq" "sha256sum")
     for dep in "${deps[@]}"; do
         if ! command -v "${dep}" &> /dev/null; then
             echo "${LINENO}: Error: Required command '$dep' \
@@ -165,31 +165,33 @@ loop_through_yaml_config_for_helm "${CONFIG_FILE}" "${REGISTRY_URL}"
 sleep 1
 echo "Done."
 
-# /check_registries.sh
-# exec /validate_manifests.sh
-
-if ! remove_yaml_entries "${CONFIG_FILE}" image \
+_output=""
+if ! _output=$(remove_yaml_entries "${CONFIG_FILE}" image \
 	--registry-path "images/alpine" \
-	--version "3.22"; then
+	--version "3.22" 2>&1); then
 	echo "Deleting chart failed"
+	echo "${_output}"
 fi
-if ! add_yaml_entries "${CONFIG_FILE}" image \
+if ! _output=$(add_yaml_entries "${CONFIG_FILE}" image \
 	--source "docker.io/library/alpine:3.22" \
 	--destination "images/alpine" \
-	--version "3.22"; then
+	--version "3.22" 2>&1); then
 	echo "Adding image failed"
+	echo "${_output}"
 fi
 
-if ! remove_yaml_entries "${CONFIG_FILE}" chart \
+if ! _output=$(remove_yaml_entries "${CONFIG_FILE}" chart \
     --chart-name "nginx" \
-    --chart-version "15.14.0"; then
+    --chart-version "15.14.0" 2>&1); then
 	echo "Deleting chart failed"
+	echo "${_output}"
 fi
-if ! add_yaml_entries "${CONFIG_FILE}" chart \
+if ! _output=$(add_yaml_entries "${CONFIG_FILE}" chart \
     --repo-name "bitnami" \
     --repo-url "https://charts.bitnami.com/bitnami" \
     --chart-name "nginx" \
     --chart-version "15.14.0" \
-    --destination "charts/"; then
+    --destination "charts/" 2>&1); then
 	echo "Adding chart failed"
+	echo "${_output}"
 fi

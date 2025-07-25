@@ -61,7 +61,9 @@ remove_yaml_entries() {
 		else
 			echo "Found image(s) at index(es): ${image_indices}. Deleting..."
 			# Loop through indices in reverse order
-			yq e '.dockerImages = (.dockerImages | .[] | select(.destinationPath != "'"${img_reg_path}"'" or .version != "'"${img_version}"'"))' -i "${config_file}"
+			# yq e '.dockerImages = (.dockerImages | .[] | select(.destinationPath != "'"${img_reg_path}"'" or .version != "'"${img_version}"'"))' -i "${config_file}"
+			yq e '.dockerImages |= (map(select(.destinationPath != "'"${img_reg_path}"'" or .version != "'"${img_version}"'")) // [])' -i "${config_file}"
+
 			# for INDEX in ${image_indices}; do
 			#     yq e "del(.dockerImages[${INDEX}])" -i "${config_file}"
 			#     echo "Deleted Docker image at index ${INDEX}."
@@ -109,7 +111,7 @@ remove_yaml_entries() {
 
 		if [ -z "${chart_indices}" ]; then # Check for empty string
 			echo "Helm chart with name '${chart_name}' and version '${chart_version}' not found in ${config_file}. Skipping deletion." >&2
-			return 1
+			return
 		else
 			echo "Found chart(s) at index(es): ${chart_indices}. Deleting..."
 			# Loop through indices in reverse order
@@ -118,8 +120,8 @@ remove_yaml_entries() {
 			#     echo "Deleted Helm chart at index ${INDEX}."
 			# done
 			# yq e '.helmCharts = (.helmCharts | .[] | select(.chartName != "'"${chart_name}"'" or .chartVersion != "'"${chart_version}"'"))' -i "${config_file}"
-			yq e '.helmCharts = (.helmCharts | .[] | select(.chartName != "'"${chart_name}"'" or .chartVersion != "'"${chart_version}"'"))' -i "${config_file}"
-
+			yq e '.helmCharts |= (map(select(.chartName != "'"${chart_name}"'" or .chartVersion != "'"${chart_version}"'")) // [])' -i "${config_file}"
+			
 			# echo "Cleaning up null entries in helmCharts array..."
 			# yq e '.helmCharts = (.helmCharts | .[] | select(. != null))' -i "${config_file}"
 			echo "Helm chart(s) removed and array compacted successfully."
@@ -132,10 +134,10 @@ remove_yaml_entries() {
 	esac
 
 	echo "Updated ${config_file}:"
-	cat "${config_file}"
+	# cat "${config_file}"
 }
 
-RUNNING="$(basename $0)"
+RUNNING="$(basename "$0")"
 
 if [ "$RUNNING" = "remove_yaml_entries" ]
 then
