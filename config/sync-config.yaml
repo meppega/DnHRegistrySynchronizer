@@ -6,9 +6,9 @@ dockerImages:
   - source: docker.io/grafana/grafana
     destinationPath: images/grafana
     version: latest
-  # - source: docker.io/library/alpine
-  #   destinationPath: images/alpine
-  #   version: latest
+    # - source: docker.io/library/alpine
+    #   destinationPath: images/alpine
+    #   version: latest
 helmCharts:
   - repoName: bitnami
     repoUrl: https://charts.bitnami.com/bitnami

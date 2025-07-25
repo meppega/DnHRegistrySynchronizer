@@ -15,8 +15,8 @@ remove_yaml_entries() {
 
 	# Check if config file exists
 	if [ ! -f "${config_file}" ]; then
-		echo "Error: Configuration file ${config_file} not found."
-		exit 1
+		echo "Configuration file ${config_file} not found. Skipping removal."
+		return
 	fi
 
 	case "${entry_type}" in
@@ -109,7 +109,7 @@ remove_yaml_entries() {
 
 		if [ -z "${chart_indices}" ]; then # Check for empty string
 			echo "Helm chart with name '${chart_name}' and version '${chart_version}' not found in ${config_file}. Skipping deletion." >&2
-			return
+			return 1
 		else
 			echo "Found chart(s) at index(es): ${chart_indices}. Deleting..."
 			# Loop through indices in reverse order
@@ -118,7 +118,7 @@ remove_yaml_entries() {
 			#     echo "Deleted Helm chart at index ${INDEX}."
 			# done
 			# yq e '.helmCharts = (.helmCharts | .[] | select(.chartName != "'"${chart_name}"'" or .chartVersion != "'"${chart_version}"'"))' -i "${config_file}"
-			yq e '.helmCharts = (.helmCharts | .[] | select(not (.chartName != "'"${chart_name}"'" or .chartVersion != "'"${chart_version}"'")))' -i "${config_file}"
+			yq e '.helmCharts = (.helmCharts | .[] | select(.chartName != "'"${chart_name}"'" or .chartVersion != "'"${chart_version}"'"))' -i "${config_file}"
 
 			# echo "Cleaning up null entries in helmCharts array..."
 			# yq e '.helmCharts = (.helmCharts | .[] | select(. != null))' -i "${config_file}"

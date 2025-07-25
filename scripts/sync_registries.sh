@@ -11,7 +11,9 @@ REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
 REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
 REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
 
+# Includes
 . "/ARISU/scripts/remove_yaml_entries.sh"
+. "/ARISU/scripts/add_yaml_entries.sh"
 
 #Function to check if all necessary dependencies are installed
 check_dependencies() {
@@ -166,20 +168,28 @@ echo "Done."
 # /check_registries.sh
 # exec /validate_manifests.sh
 
-remove_yaml_entries "${CONFIG_FILE}" image \
+if ! remove_yaml_entries "${CONFIG_FILE}" image \
 	--registry-path "images/alpine" \
-	--version "3.22"
-/ARISU/scripts/add_yaml_entries.sh image \
+	--version "3.22"; then
+	echo "Deleting chart failed"
+fi
+if ! add_yaml_entries "${CONFIG_FILE}" image \
 	--source "docker.io/library/alpine:3.22" \
 	--destination "images/alpine" \
-	--version "3.22"
+	--version "3.22"; then
+	echo "Adding image failed"
+fi
 
-remove_yaml_entries "${CONFIG_FILE}" chart \
+if ! remove_yaml_entries "${CONFIG_FILE}" chart \
     --chart-name "nginx" \
-    --chart-version "15.14.0"
-/ARISU/scripts/add_yaml_entries.sh chart \
+    --chart-version "15.14.0"; then
+	echo "Deleting chart failed"
+fi
+if ! add_yaml_entries "${CONFIG_FILE}" chart \
     --repo-name "bitnami" \
     --repo-url "https://charts.bitnami.com/bitnami" \
     --chart-name "nginx" \
     --chart-version "15.14.0" \
-    --destination "charts/"
+    --destination "charts/"; then
+	echo "Adding chart failed"
+fi
