@@ -1,16 +1,34 @@
 name: Greetings
 
-on: [pull_request_target, issues]
+on:
+  issues:
+    types: [opened] # Trigger when an issue is opened
+  pull_request_target:
+    types: [opened] # Trigger when a pull request is opened
 
 jobs:
   greeting:
     runs-on: ubuntu-latest
     permissions:
-      issues: write
-      pull-requests: write
+      issues: write # Required to write comments on issues
+      pull-requests: write # Required to write comments on pull requests
     steps:
-    - uses: actions/first-interaction@v1
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        issue-message: "Message that will be displayed on users' first issue"
-        pr-message: "Message that will be displayed on users' first pull request"
+      - name: Comment on new issue
+        # This step runs only if the event is an 'issue' and the action is 'opened'
+        if: github.event_name == 'issues' && github.event.action == 'opened'
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.issue.number }} # Gets the issue number from the event payload
+          body: |
+            👋 Thanks for opening this issue! We appreciate your contribution and will take a look at it shortly.
+          token: ${{ secrets.GITHUB_TOKEN }} # Uses the default GitHub token for authentication
+
+      - name: Comment on new pull request
+        # This step runs only if the event is a 'pull_request_target' and the action is 'opened'
+        if: github.event_name == 'pull_request_target' && github.event.action == 'opened'
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }} # Gets the pull request number from the event payload
+          body: |
+            🎉 Thanks for opening this pull request! We'll review it as soon as possible.
+          token: ${{ secrets.GITHUB_TOKEN }} # Uses the default GitHub token for authentication

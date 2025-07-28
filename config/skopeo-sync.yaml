@@ -7,7 +7,7 @@
 #             - "sha256:0000000000000000000000000000000011111111111111111111111111111111"
 #     images-by-tag-regex:
 #         nginx: ^1\.13\.[12]-alpine-perl$
-#     images-by-semver:
+#     images-by-server:
 #         alpine: ">= 3.12.0"
 #     credentials:
 #         username: john

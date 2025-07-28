@@ -28,7 +28,7 @@ check_dependencies() {
 	echo "All dependencies present"
 }
 
-#TODO: add comparing if images are different
+#TODO: add comparing if images are different, sync "latest" as a version tag
 check_and_sync_helm() {
 	local repo_name="$1"
 	local repo_url="$2"
