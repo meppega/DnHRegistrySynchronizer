@@ -5,7 +5,7 @@
 set -o errexit
 set -o nounset
 
-CONFIG_FILE="/ARISU/config/sync-config.yaml"
+readonly CONFIG_FILE="/ARISU/config/sync-config.yaml"
 
 REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
 REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
@@ -141,57 +141,3 @@ loop_through_yaml_config_for_skopeo() {
 		check_and_sync_skopeo "${source_image}" "${registry_url}/${dest_path}" "${version}"
 	done
 }
-
-# Run dependency check
-check_dependencies
-
-# logging skopeo in
-#echo "$REGISTRY_PASS" | skopeo login "$REGISTRY_URL" --username "$REGISTRY_USER" --password-stdin
-# helm login
-# helm registry login ...
-
-echo "--- Syncing Docker images ---"
-
-# check_and_sync_skopeo "docker.io/library/alpine" "$REGISTRY_URL/alpine" "3.22"
-# check_and_sync_skopeo "docker.io/library/alpine" "$REGISTRY_URL/alpine" "3.16"
-# check_and_sync_skopeo "docker.io/grafana/grafana" "$REGISTRY_URL/charts/grafana" "12.0.2"
-
-loop_through_yaml_config_for_skopeo "${CONFIG_FILE}" "${REGISTRY_URL}"
-
-echo "--- Syncing Helm Charts ---"
-
-loop_through_yaml_config_for_helm "${CONFIG_FILE}" "${REGISTRY_URL}"
-
-sleep 1
-echo "Done."
-
-_output=""
-if ! _output=$(remove_yaml_entries "${CONFIG_FILE}" image \
-	--registry-path "images/alpine" \
-	--version "3.22" 2>&1); then
-	echo "Deleting chart failed"
-	echo "${_output}"
-fi
-if ! _output=$(add_yaml_entries "${CONFIG_FILE}" image \
-	--source "docker.io/library/alpine:3.22" \
-	--destination "images/alpine" \
-	--version "3.22" 2>&1); then
-	echo "Adding image failed"
-	echo "${_output}"
-fi
-
-if ! _output=$(remove_yaml_entries "${CONFIG_FILE}" chart \
-    --chart-name "nginx" \
-    --chart-version "15.14.0" 2>&1); then
-	echo "Deleting chart failed"
-	echo "${_output}"
-fi
-if ! _output=$(add_yaml_entries "${CONFIG_FILE}" chart \
-    --repo-name "bitnami" \
-    --repo-url "https://charts.bitnami.com/bitnami" \
-    --chart-name "nginx" \
-    --chart-version "15.14.0" \
-    --destination "charts/" 2>&1); then
-	echo "Adding chart failed"
-	echo "${_output}"
-fi

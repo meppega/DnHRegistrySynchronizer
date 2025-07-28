@@ -5,7 +5,7 @@ set -o errexit
 set -o nounset
 #set -o pipefail
 
-readonly CONFIG_FILE="/sync-config.yaml"
+readonly CONFIG_FILE="/ARISU/config/sync-config.yaml"
 
 REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
 REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")

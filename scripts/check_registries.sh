@@ -13,7 +13,7 @@ set -o nounset
 # helm pull oci://localhost:5000/charts/nginx
 # helm pull oci://localhost:5000/charts/nginx --version 15.14.0
 
-readonly CONFIG_FILE="/sync-config.yaml"
+readonly CONFIG_FILE="/ARISU/config/sync-config.yaml"
 REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
 REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
 REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
