@@ -13,35 +13,35 @@ set -o nounset
 # helm pull oci://localhost:5000/charts/nginx
 # helm pull oci://localhost:5000/charts/nginx --version 15.14.0
 
-readonly CONFIG_FILE="/ARISU/config/sync-config.yaml"
-REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
-REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
-REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
-
 check_registry_images() {
 	echo "--- Checking Registry Images against Config ---"
+	local config_file="$1"
+
+	local REGISTRY_URL=$(yq '.registry.url' "${config_file}")
+	local REGISTRY_USER=$(yq '.registry.user' "${config_file}")
+	local REGISTRY_PASS=$(yq '.registry.password' "${config_file}")
 
 	declare -A expected_images # Images listed in sync-config.yaml
 	declare -A existing_images   # Images actually found in the registry
 
 	# 1. Get expected images from sync-config.yaml
 	# For Docker
-	echo "  > Reading expected Docker images from ${CONFIG_FILE}..."
-	local image_count=$(yq '.dockerImages | length' "${CONFIG_FILE}")
+	echo "  > Reading expected Docker images from ${config_file}..."
+	local image_count=$(yq '.dockerImages | length' "${config_file}")
 	for i in $(seq 0 $((image_count - 1))); do
-		local source_image=$(yq ".dockerImages[$i].source" "${CONFIG_FILE}")
-		local dest_path=$(yq ".dockerImages[$i].destinationPath" "${CONFIG_FILE}")
-		local version=$(yq ".dockerImages[$i].version" "${CONFIG_FILE}")
+		local source_image=$(yq ".dockerImages[$i].source" "${config_file}")
+		local dest_path=$(yq ".dockerImages[$i].destinationPath" "${config_file}")
+		local version=$(yq ".dockerImages[$i].version" "${config_file}")
 		local expected_dest_image="${dest_path}:${version}"
 		# echo ${expected_dest_image}
 		expected_images["${expected_dest_image}"]=1 # Store as key
 	done
 	# For Helm
-	local image_count=$(yq '.helmCharts | length' "${CONFIG_FILE}")
+	local image_count=$(yq '.helmCharts | length' "${config_file}")
 	for i in $(seq 0 $((image_count - 1))); do
-		local chart_name=$(yq ".helmCharts[$i].chartName" "${CONFIG_FILE}")
-		local chart_version=$(yq ".helmCharts[$i].chartVersion" "${CONFIG_FILE}")
-		local dest_path=$(yq ".helmCharts[$i].destinationPath" "${CONFIG_FILE}")
+		local chart_name=$(yq ".helmCharts[$i].chartName" "${config_file}")
+		local chart_version=$(yq ".helmCharts[$i].chartVersion" "${config_file}")
+		local dest_path=$(yq ".helmCharts[$i].destinationPath" "${config_file}")
 		local expected_dest_image="${dest_path}${chart_name}:${chart_version}"
 		# echo ${expected_dest_image}
 		expected_images["${expected_dest_image}"]=1
@@ -104,4 +104,9 @@ check_registry_images() {
 	echo "--- Registry Image Check Complete ---"
 }
 
-check_registry_images
+RUNNING="$(basename "$0")"
+
+if [ "$RUNNING" = "check_registry_images" ]
+then
+    check_registry_images "$@"
+fi

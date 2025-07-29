@@ -30,9 +30,9 @@ function mark_previous_run {
     return $?
 }
 
-RUNNING="$(basename $0)"
+# RUNNING="$(basename $0)"
 
-if [ "$RUNNING" = "error_handling" ]
-then
-    error_handling "$@"
-fi
+# if [ "$RUNNING" = "error_handling" ]
+# then
+#     error_handling "$@"
+# fi

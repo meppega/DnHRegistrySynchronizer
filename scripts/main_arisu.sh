@@ -37,11 +37,11 @@ echo "--- Syncing Docker images ---"
 # check_and_sync_skopeo "docker.io/library/alpine" "$REGISTRY_URL/alpine" "3.16"
 # check_and_sync_skopeo "docker.io/grafana/grafana" "$REGISTRY_URL/charts/grafana" "12.0.2"
 
-loop_through_yaml_config_for_skopeo "${CONFIG_FILE}" "${REGISTRY_URL}"
+loop_through_yaml_config_for_skopeo "${CONFIG_FILE}"
 
 echo "--- Syncing Helm Charts ---"
 
-loop_through_yaml_config_for_helm "${CONFIG_FILE}" "${REGISTRY_URL}"
+loop_through_yaml_config_for_helm "${CONFIG_FILE}"
 
 sleep 1
 echo "Done."

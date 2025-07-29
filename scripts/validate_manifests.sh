@@ -5,12 +5,6 @@ set -o errexit
 set -o nounset
 #set -o pipefail
 
-readonly CONFIG_FILE="/ARISU/config/sync-config.yaml"
-
-REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
-REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
-REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
-
 # Function to get Docker image SHA256 digest using skopeo inspect
 # Arguments:
 #   $1: image_ref (e.g., docker.io/library/alpine:3.22 or registry:5000/images/alpine:3.22)
@@ -54,12 +48,17 @@ get_tgz_sha256() {
 # Main validation logic function
 validate_skopeo() {
 	echo "--- Starting Sync Validation ---"
+	local config_file="$1"
 	local image_count=0
 	local source_image=""
 	local dest_path=""
 	local dest_image=""
 	local source_digest=""
 	local dest_digest=""
+	local REGISTRY_URL=$(yq '.registry.url' "${config_file}")
+	local REGISTRY_USER=$(yq '.registry.user' "${config_file}")
+	local REGISTRY_PASS=$(yq '.registry.password' "${config_file}")
+
 
 	# Log in to the local registry for Skopeo and Helm to ensure access
 	echo "  > Logging into local registry: ${REGISTRY_URL}..."
@@ -68,15 +67,15 @@ validate_skopeo() {
 	# Validate Docker Images
 	echo ""
 	echo "--- Validating Docker Images ---"
-	image_count=$(yq '.dockerImages | length' "${CONFIG_FILE}")
+	image_count=$(yq '.dockerImages | length' "${config_file}")
 	if [ "${image_count}" -eq 0 ]; then
 		echo "  No Docker images configured for synchronization."
 		return
 	fi
 
 	for i in $(seq 0 $((image_count - 1))); do
-		source_image=$(yq ".dockerImages[$i].source" "${CONFIG_FILE}")
-		dest_path=$(yq ".dockerImages[$i].destinationPath" "${CONFIG_FILE}")
+		source_image=$(yq ".dockerImages[$i].source" "${config_file}")
+		dest_path=$(yq ".dockerImages[$i].destinationPath" "${config_file}")
 		dest_image="${REGISTRY_URL}/${dest_path}"
 
 		echo "Checking image: ${source_image} -> ${dest_image}"
@@ -106,7 +105,7 @@ validate_helm() {
 	# Validate Helm Charts
 	# Helm registry login (using --plain-http for insecure local registry)
 	#helm registry login "${REGISTRY_URL}" --username "${REGISTRY_USER}" --password "${REGISTRY_PASS}" --plain-http || { echo "Helm registry login failed."; exit 1; }
-
+	local config_file="$1"
 	local chart_count=0
 	local repo_url
 	local chart_name
@@ -117,21 +116,24 @@ validate_helm() {
 	local existing_chart_file
 	local source_sha
 	local dest_sha
+	local REGISTRY_URL=$(yq '.registry.url' "${config_file}")
+	local REGISTRY_USER=$(yq '.registry.user' "${config_file}")
+	local REGISTRY_PASS=$(yq '.registry.password' "${config_file}")
 
 	echo ""
 	echo "--- Validating Helm Charts ---"
-	chart_count=$(yq '.helmCharts | length' "${CONFIG_FILE}")
+	chart_count=$(yq '.helmCharts | length' "${config_file}")
 	if [ "${chart_count}" -eq 0 ]; then
 		echo "  No Helm charts configured for synchronization."
 		return
 	fi
 
 	for i in $(seq 0 $((chart_count - 1))); do
-		# repo_name=$(yq ".helmCharts[$i].repoName" "${CONFIG_FILE}")
-		repo_url=$(yq ".helmCharts[$i].repoUrl" "${CONFIG_FILE}")
-		chart_name=$(yq ".helmCharts[$i].chartName" "${CONFIG_FILE}")
-		chart_version=$(yq ".helmCharts[$i].chartVersion" "${CONFIG_FILE}")
-		dest_path=$(yq ".helmCharts[$i].destinationPath" "${CONFIG_FILE}")
+		# repo_name=$(yq ".helmCharts[$i].repoName" "${config_file}")
+		repo_url=$(yq ".helmCharts[$i].repoUrl" "${config_file}")
+		chart_name=$(yq ".helmCharts[$i].chartName" "${config_file}")
+		chart_version=$(yq ".helmCharts[$i].chartVersion" "${config_file}")
+		dest_path=$(yq ".helmCharts[$i].destinationPath" "${config_file}")
 
 		# Construct destination OCI URL (e.g., oci://registry:5000/charts/nginx)
 		dest_oci_url="oci://${REGISTRY_URL}/${dest_path}${chart_name}"
@@ -183,7 +185,5 @@ validate_helm() {
 }
 
 # Run validation
-validate_skopeo
-validate_helm
-
-echo "--- Sync Validation Complete ---"
+# validate_skopeo
+# validate_helm

@@ -5,16 +5,6 @@
 set -o errexit
 set -o nounset
 
-readonly CONFIG_FILE="/ARISU/config/sync-config.yaml"
-
-REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
-REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
-REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
-
-# Includes
-source "/ARISU/scripts/remove_yaml_entries.sh"
-source "/ARISU/scripts/add_yaml_entries.sh"
-
 #Function to check if all necessary dependencies are installed
 check_dependencies() {
     local deps=("yq" "skopeo" "helm" "curl" "yq" "sha256sum")
@@ -52,7 +42,7 @@ check_and_sync_helm() {
 	helm pull "${chart_name}" --repo "${repo_url}" --version "${chart_version}" --destination /tmp
 
 	if [ ! -f "/tmp/${file_name}.tgz" ]; then
-		echo "Error: Chart ${HELM_CHART}.tgz failed to download. Skipping."
+		echo "Error: Chart ${file_name}.tgz failed to download. Skipping."
 		return
 	fi
 
@@ -95,7 +85,6 @@ check_and_sync_skopeo() {
 
 loop_through_yaml_config_for_helm() {
 	local config_file="$1"
-	local registry_url="$2"
 
     local chart_count=0
     local repo_name=""
@@ -103,6 +92,10 @@ loop_through_yaml_config_for_helm() {
     local chart_name=""
     local chart_vertion="" 
     local dest_path=""
+
+	local registry_url=$(yq '.registry.url' "${config_file}")
+	local registry_user=$(yq '.registry.user' "${config_file}")
+	local registry_pass=$(yq '.registry.password' "${config_file}")
 
     chart_count=$(yq '.helmCharts | length' "${config_file}")
 
@@ -124,12 +117,15 @@ loop_through_yaml_config_for_helm() {
 
 loop_through_yaml_config_for_skopeo() {
 	local config_file="$1"
-	local registry_url="$2"
 
     local image_count=0
     local source_image=""
     local dest_path=""
     local version=""
+
+	local registry_url=$(yq '.registry.url' "${config_file}")
+	local registry_user=$(yq '.registry.user' "${config_file}")
+	local registry_pass=$(yq '.registry.password' "${config_file}")
 
     image_count=$(yq '.dockerImages | length' "${config_file}")
 
