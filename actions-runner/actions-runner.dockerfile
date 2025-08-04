@@ -6,6 +6,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 #user
 USER root
 
+#log dir, possibly wont be used
+#RUN mkdir -p /var/log/arisu && chown runner:runner /var/log/arisu
+
 # Set the locale
 ENV TZ=Europe/Warsaw \
     LANG=en_US.UTF-8 \
