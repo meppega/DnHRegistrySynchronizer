@@ -1,21 +1,31 @@
 #!/bin/bash
 
-# includes
-source "/ARISU/scripts/error_handling.sh"
-source "/ARISU/scripts/remove_yaml_entries.sh"
-source "/ARISU/scripts/add_yaml_entries.sh"
-source "/ARISU/scripts/check_registries.sh"
-source "/ARISU/scripts/sync_registries.sh"
-source "/ARISU/scripts/validate_manifests.sh"
+# Main ARISU (Automatic recurring image synchronization utility) script
+# TODO in depth usage
 
-CONFIG_FILE="/ARISU/config/sync-config.yaml"
+# Global configuration
+export LOG_FILE="/var/log/arisu.log"
+# Define the name of your script for MESSAGE_ID in journald
+export SCRIPT_NAME=$(basename "${BASH_SOURCE[0]}")|| exit 100
+# Define the full path of your script for CODE_FILE in journald
+export FULL_PATH=$(readlink -f "${BASH_SOURCE[0]}")|| exit 100
+
+# Includes
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/remove_yaml_entries.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/add_yaml_entries.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/check_registries.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/sync_registries.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/validate_manifests.sh"|| exit 100
+
+SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
+PROJECT_ROOT=$(readlink -f "$SCRIPT_DIR/..")
+CONFIG_FILE="$PROJECT_ROOT/config/sync-config.yaml"
 
 REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}")
 REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}")
 REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}")
 
-SCRIPT_NAME=$(/usr/bin/basename "${BASH_SOURCE[0]}")|| exit 100
-FULL_PATH=$(/usr/bin/realpath "${BASH_SOURCE[0]}")|| exit 100
 declare CACHE_DIR="/tmp/$SCRIPT_NAME/YYYYMMDD"
 
 if [ ! -d "$CACHE_DIR" ]; then

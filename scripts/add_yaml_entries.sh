@@ -1,9 +1,12 @@
 #!/bin/bash
+
 # Script to add a Docker image or Helm chart entry to sync-config.yaml
 
 set -o errexit
 set -o nounset
 #set -o pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 add_yaml_entries() {
 	# Parse the type of entry to remove

@@ -1,9 +1,12 @@
 #!/bin/bash
 
-#set -eu
+# Script to synchronize images from a yaml configuration file to a registry
+
 #set -o pipefail
 set -o errexit
 set -o nounset
+
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 #Function to check if all necessary dependencies are installed
 check_dependencies() {

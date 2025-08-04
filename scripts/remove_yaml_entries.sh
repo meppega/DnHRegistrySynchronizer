@@ -7,6 +7,8 @@ set -o errexit
 set -o nounset
 #set -o pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+
 remove_yaml_entries() {
 	# Parse the type of entry to remove
 	local config_file="$1"

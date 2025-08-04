@@ -1,17 +1,12 @@
 #!/bin/bash
 
+# Script to check yaml config file and compare its contents with a registry
+
 set -o errexit
 set -o nounset
 #set -o pipefail
 
-#helm repo add bitnami https://charts.bitnami.com/bitnami
-# helm repo update
-# helm pull bitnami/nginx --version 15.14.0
-# helm push nginx-15.14.0.tgz oci://localhost:5000/charts/
-
-# # test
-# helm pull oci://localhost:5000/charts/nginx
-# helm pull oci://localhost:5000/charts/nginx --version 15.14.0
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 check_registry_images() {
 	echo "--- Checking Registry Images against Config ---"
@@ -106,7 +101,7 @@ check_registry_images() {
 
 RUNNING="$(basename "$0")"
 
-if [ "$RUNNING" = "check_registry_images" ]
+if [ "$RUNNING" = "check_registries" ]
 then
-    check_registry_images "$@"
+    check_registries "$@"
 fi

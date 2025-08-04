@@ -1,9 +1,12 @@
 #!/bin/bash
+
 # Script to validate synchronized Docker images and Helm charts by comparing SHA256 digests
 
 set -o errexit
 set -o nounset
 #set -o pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # Function to get Docker image SHA256 digest using skopeo inspect
 # Arguments:
@@ -31,18 +34,6 @@ get_docker_image_digest() {
 		echo "    Warning: Could not inspect image ${image_ref}. It might not exist or there's a connectivity issue." >&2
 	fi
 	echo "${digest}"
-}
-
-# Function to calculate SHA256 digest of a .tgz file
-# Arguments:
-#   $1: tgz_file (path to the tarball)
-get_tgz_sha256() {
-	local tgz_file="$1"
-	if [ -f "${tgz_file}" ]; then
-		sha256sum "${tgz_file}" | awk '{print $1}'
-	else
-		echo "" # Return empty string if file not found
-	fi
 }
 
 # Main validation logic function
