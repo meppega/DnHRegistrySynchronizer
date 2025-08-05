@@ -23,12 +23,12 @@ export SCRIPT_NAME=$(basename "${BASH_SOURCE[0]}")|| exit 100
 export FULL_PATH=$(readlink -f "${BASH_SOURCE[0]}")|| exit 100
 
 # Includes
-source "$(dirname "${BASH_SOURCE[0]}")/common.sh"|| exit 100
-source "$(dirname "${BASH_SOURCE[0]}")/remove_yaml_entries.sh"|| exit 100
-source "$(dirname "${BASH_SOURCE[0]}")/add_yaml_entries.sh"|| exit 100
-source "$(dirname "${BASH_SOURCE[0]}")/check_registries.sh"|| exit 100
-source "$(dirname "${BASH_SOURCE[0]}")/sync_registries.sh"|| exit 100
-source "$(dirname "${BASH_SOURCE[0]}")/validate_manifests.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/common.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/remove_yaml_entries.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/add_yaml_entries.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/check_registries.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/sync_registries.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/validate_manifests.sh"|| exit 100
 
 SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
 PROJECT_ROOT=$(readlink -f "$SCRIPT_DIR/..")
@@ -90,7 +90,7 @@ main() {
 		echo "${_output}"
 	fi
 	if ! _output=$(add_yaml_entries "${CONFIG_FILE}" image \
-		--source "docker.io/library/alpine:3.22" \
+		--source "docker.io/library/alpine" \
 		--destination "images/alpine" \
 		--version "3.22" 2>&1); then
 		echo "Adding image failed"

@@ -56,13 +56,13 @@ check_and_sync_helm() {
 
     log_info "Chart '${chart_name}:${chart_version}' not found. Attempting to add it to '${dest_registry_url}'." "check_and_sync_helm"
 
-    log_info "Adding Helm repository: ${repo_name} from ${repo_url}..." "check_and_sync_helm"
-    helm repo add "${repo_name}" "${repo_url}" --force-update \
-        || die "Failed to add Helm repository '${repo_name}' from '${repo_url}'."
+    # log_info "Adding Helm repository: ${repo_name} from ${repo_url}..." "check_and_sync_helm"
+    # helm repo add "${repo_name}" "${repo_url}" --force-update \
+    #     || die "Failed to add Helm repository '${repo_name}' from '${repo_url}'."
 
-    log_info "Updating Helm repository: ${repo_name}..." "check_and_sync_helm"
-    helm repo update "${repo_name}" \
-        || log_warning "Failed to update Helm repository '${repo_name}'. Continuing, but might use stale index." "check_and_sync_helm"
+    # log_info "Updating Helm repository: ${repo_name}..." "check_and_sync_helm"
+    # helm repo update "${repo_name}" \
+    #     || log_warning "Failed to update Helm repository '${repo_name}'. Continuing, but might use stale index." "check_and_sync_helm"
 
     log_info "Pulling Helm chart '${chart_name}:${chart_version}' from traditional repository..." "check_and_sync_helm"
     helm pull "${chart_name}" --repo "${repo_url}" --version "${chart_version}" --destination /tmp \
@@ -113,9 +113,9 @@ check_and_sync_skopeo() {
         "${full_source_image_ref}" \
         "${full_dest_image_ref}" \
         --dest-tls-verify=false \
-        --all \
-        --preserve-digests \
         || die "Failed to copy image '${full_source_image_ref}' to '${full_dest_image_ref}'."
+        # --all \
+        # --preserve-digests \
 
     log_info "Successfully copied '${full_source_image_ref}' to '${full_dest_image_ref}'." "check_and_sync_skopeo"
 }
@@ -160,7 +160,7 @@ loop_through_yaml_config_for_helm() {
     for i in $(seq 0 $((chart_count - 1))); do
         log_info "Processing Helm chart entry $((i + 1))/${chart_count}." "loop_through_yaml_config_for_helm"
 
-        local repo_name="" chart_name="" chart_version="" dest_path="" repo_url="" # Initialize locals to avoid unset errors if yq fails
+        local repo_name="" chart_name="" chart_version="" dest_path="" repo_url=""
         
         repo_name=$(yq ".helmCharts[$i].repoName" "${config_file}")      || log_error "Failed to get repoName for chart index $i." "loop_through_yaml_config_for_helm"
         repo_url=$(yq ".helmCharts[$i].repoUrl" "${config_file}")        || log_error "Failed to get repoUrl for chart index $i." "loop_through_yaml_config_for_helm"
@@ -172,6 +172,12 @@ loop_through_yaml_config_for_helm() {
         if [[ -z "$repo_name" || -z "$repo_url" || -z "$chart_name" || -z "$chart_version" || -z "$dest_path" ]]; then
             log_error "Skipping Helm chart entry $i due to missing critical configuration fields." "loop_through_yaml_config_for_helm"
             continue # Skip to the next chart entry
+        fi
+
+        # Check if the chart already exists in the destination registry
+        if helm show chart "oci://${registry_url}/${dest_path}${chart_name}" --plain-http >/dev/null 2>&1; then
+            log_info "Chart ${registry_url}/${dest_path}${chart_name} exists. Skipping synchronization." "loop_through_yaml_config_for_helm"
+            continue
         fi
 
         # Pass "oci://${registry_url}/${dest_path}" as the destination for check_and_sync_helm

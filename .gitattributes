@@ -1,6 +1,7 @@
 # line endings
 config/* text eol=lf
 scripts/* text eol=lf
+scripts/libs/* text eol=lf
 local_registry/* text eol=lf
 
 # counting code
