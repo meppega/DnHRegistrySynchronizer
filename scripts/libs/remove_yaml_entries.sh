@@ -12,7 +12,7 @@
 
 set -o errexit
 set -o nounset
-# set -o pipefail # Pipefail is commented out in the original, so keeping it commented here.
+set -o pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 

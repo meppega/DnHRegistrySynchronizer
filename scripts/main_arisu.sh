@@ -113,6 +113,10 @@ main() {
 		echo "${_output}"
 	fi
 
+	check_registry_images "${CONFIG_FILE}"
+
+	validate_sync_digests "${CONFIG_FILE}"
+
 }
 
 # --- Execute the main function ---
