@@ -18,17 +18,17 @@ trap '_err_trap_handler' ERR
 # Global configuration
 export LOG_FILE="/home/runner/arisu.log" # Alternatively docker will capture "/dev/stderr" or "/var/log/arisu/arisu.log"
 # Define the name of your script for MESSAGE_ID in journald
-export SCRIPT_NAME=$(basename "${BASH_SOURCE[0]}")|| exit 100
+export SCRIPT_NAME=$(basename "${BASH_SOURCE[0]}") || exit 100
 # Define the full path of your script for CODE_FILE in journald
-export FULL_PATH=$(readlink -f "${BASH_SOURCE[0]}")|| exit 100
+export FULL_PATH=$(readlink -f "${BASH_SOURCE[0]}") || exit 100
 
 # Includes
-source "$(dirname "${BASH_SOURCE[0]}")/libs/common.sh"|| exit 100
-source "$(dirname "${BASH_SOURCE[0]}")/libs/remove_yaml_entries.sh"|| exit 100
-source "$(dirname "${BASH_SOURCE[0]}")/libs/add_yaml_entries.sh"|| exit 100
-source "$(dirname "${BASH_SOURCE[0]}")/libs/check_registries.sh"|| exit 100
-source "$(dirname "${BASH_SOURCE[0]}")/libs/sync_registries.sh"|| exit 100
-source "$(dirname "${BASH_SOURCE[0]}")/libs/validate_manifests.sh"|| exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/common.sh" || exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/remove_yaml_entries.sh" || exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/add_yaml_entries.sh" || exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/check_registries.sh" || exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/sync_registries.sh" || exit 100
+source "$(dirname "${BASH_SOURCE[0]}")/libs/validate_manifests.sh" || exit 100
 
 SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
 PROJECT_ROOT=$(readlink -f "$SCRIPT_DIR/..")
@@ -42,15 +42,19 @@ declare CACHE_DIR="/tmp/$SCRIPT_NAME/YYYYMMDD"
 
 # Ensure the log file directory exists and is writable
 LOG_DIR=$(dirname "$LOG_FILE")
-if [[ ! -d "$LOG_DIR" ]]; then
-    mkdir -p "$LOG_DIR" || { echo "CRITICAL: Failed to create log directory: $LOG_DIR. Exiting."; exit 1; }
+if [[ ! -d $LOG_DIR ]]; then
+	mkdir -p "$LOG_DIR" || {
+		echo "CRITICAL: Failed to create log directory: $LOG_DIR. Exiting."
+		exit 1
+	}
 fi
-if [[ ! -w "$LOG_DIR" ]]; then
-    echo "CRITICAL: Log directory '$LOG_DIR' is not writable. Please check permissions. Exiting."; exit 1;
+if [[ ! -w $LOG_DIR ]]; then
+	echo "CRITICAL: Log directory '$LOG_DIR' is not writable. Please check permissions. Exiting."
+	exit 1
 fi
 
 if [ ! -d "$CACHE_DIR" ]; then
-    /usr/bin/mkdir -p -v "$CACHE_DIR"|| exit 100
+	/usr/bin/mkdir -p -v "$CACHE_DIR" || exit 100
 fi
 trap '/bin/rm -rf "$CACHE_DIR"' INT TERM
 
