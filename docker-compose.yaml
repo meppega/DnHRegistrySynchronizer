@@ -31,7 +31,7 @@ services:
       - ./scripts:/ARISU/scripts
       - ./config:/ARISU/config
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
-    entrypoint: ["sh", "/sync_registries.sh"]
+    entrypoint: ["/bin/bash", "/ARISU/scripts/ARISU.sh", "-h"]
     # depends_on:
     #  - registry
     profiles:
@@ -48,7 +48,10 @@ services:
       - ./scripts:/ARISU/scripts
       - ./config:/ARISU/config
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
-    entrypoint: ["/bin/bash","/ARISU/scripts/main_arisu.sh"] #["/bin/bash"]
+    entrypoint: 
+      ["/bin/bash",
+      "/ARISU/scripts/ARISU.sh",
+      "-h"]
     # depends_on:
     #  - registry
     profiles:

@@ -14,7 +14,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/libs/common.sh"
 
 remove_yaml_entries() {
 	local config_file="$1"
@@ -131,7 +131,7 @@ remove_yaml_entries() {
 	# The original script commented out 'cat "${config_file}"', so we won't print the file content by default.
 }
 
-# This conditional block ensures the function is called only when the script is executed directly.
-if [[ "$(basename "$0")" == "remove_yaml_entries.sh" || "$(basename "$0")" == "remove_yaml_entries" ]]; then
-	remove_yaml_entries "$@"
-fi
+# # This conditional block ensures the function is called only swhen the script is executed directly.
+# if [[ "$(basename "$0")" == "remove_yaml_entries.sh" || "$(basename "$0")" == "remove_yaml_entries" ]]; then
+# 	remove_yaml_entries "$@"
+# fi
