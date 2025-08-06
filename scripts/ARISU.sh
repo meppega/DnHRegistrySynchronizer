@@ -180,13 +180,13 @@ main() {
     fi
 
     # Define CACHE_DIR dynamically for each run
-    local CACHE_DIR
-	CACHE_DIR="/tmp/${SCRIPT_NAME}_$(date +%Y%m%d%H%M%S)"
-    if ! mkdir -p -v "$CACHE_DIR"; then
-        die "Failed to create cache directory: $CACHE_DIR." "main"
-    fi
+    # local CACHE_DIR
+	# CACHE_DIR="/tmp/${SCRIPT_NAME}_$(date +%Y%m%d%H%M%S)"
+    # if ! mkdir -p -v "$CACHE_DIR"; then
+    #     die "Failed to create cache directory: $CACHE_DIR." "main"
+    # fi
     # Set trap to clean up cache directory on exit (INT, TERM, or normal exit)
-    trap '/bin/rm -rf "$CACHE_DIR"' EXIT INT TERM
+    # trap '/bin/rm -rf "$CACHE_DIR"' EXIT INT TERM
 
     check_dependencies # This should always run to ensure tools are present
 
@@ -236,7 +236,7 @@ main() {
 
     if should_run_script "validate"; then
         echo "--- Validating Manifests ---"
-        validate_manifests "${CONFIG_FILE}" #"${REGISTRY_URL}" "${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}" "${CACHE_DIR}"
+        validate_sync_digests "${CONFIG_FILE}" #"${REGISTRY_URL}" "${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}" "${CACHE_DIR}"
     else
         log_info "Skipping 'validate' stage." "main"
     fi
@@ -285,7 +285,7 @@ main() {
 
     if should_run_script "check"; then
         echo "--- Checking Registry Contents ---"
-        check_registries "${CONFIG_FILE}" #"${REGISTRY_URL}" "${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}"
+        check_registry_images "${CONFIG_FILE}" #"${REGISTRY_URL}" "${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}"
     else
         log_info "Skipping 'check' stage." "main"
     fi
