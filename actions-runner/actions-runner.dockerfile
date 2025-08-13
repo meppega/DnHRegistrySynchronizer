@@ -61,8 +61,8 @@ RUN apt-fast update \
     wget \
     zip \
     gh \
-    tzdata \
-    skopeo
+    tzdata
+#    skopeo
 
 # COPY actions-runners/runners-images/pracuj-local-dc-atm-ca.crt /usr/local/share/ca-certificates/
 # COPY actions-runners/runners-images/pracuj-local-ca.crt /usr/local/share/ca-certificates/

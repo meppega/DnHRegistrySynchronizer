@@ -1,14 +1,20 @@
-name: Greetings
+name: \[RR-6677\] Greetings
 
 on:
   issues:
-    types: [opened] # Trigger when an issue is opened
+    branches:
+      - "RR-6677"
+    types: [opened]
   pull_request_target:
-    types: [opened] # Trigger when a pull request is opened
+    branches:
+      - "RR-6677"
+    types: [opened]
 
 jobs:
   greeting:
     runs-on: ubuntu-latest
+    # runs-on: rebootrebels-azure-prod
+    # environment: prod
     permissions:
       issues: write # Required to write comments on issues
       pull-requests: write # Required to write comments on pull requests

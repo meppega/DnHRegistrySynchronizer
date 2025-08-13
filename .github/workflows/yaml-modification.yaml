@@ -1,0 +1,95 @@
+name: \[RR-6677\] Update yaml containing images for sync
+
+on:
+  workflow_dispatch:
+    branches:
+      - "RR-6677" 
+  # schedule:
+  #   - cron: '0 0 * * *'
+  # push:
+
+jobs:
+  update-yaml:
+    runs-on: ubuntu-latest
+    # runs-on: rebootrebels-azure-prod
+    # environment: prod
+    # env:
+    #   CONFIG_FILE: "config/sync-config.yaml"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # - name: 'Az CLI login'
+      #   uses: azure/login@v2
+      #   with:
+      #     client-id: ${{ vars.AZURE_CLIENT_ID }}
+      #     tenant-id: ${{ vars.AZURE_TENANT_ID }}
+      #     subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build actions-runner image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./actions-runner
+          file: ./actions-runner/actions-runner.dockerfile
+          tags: actions-runner:latest
+          push: false
+
+      - name: Bring up Docker Compose services
+        run: docker-compose -f docker-compose.yaml up -d --build actions-runner
+
+      - name: Install skopeo in actions-runner container
+        run: |
+          docker-compose -f docker-compose.yaml exec actions-runner bash -c "apt-get update && apt-fast install -y skopeo"
+
+      - name: Create or clear the target config file
+        # This ensures the file exists before the scripts try to modify it
+        run: |
+          mkdir -p config
+          echo "dockerImages: [] \n" > "${{ env.CONFIG_FILE }}"
+          echo "helmCharts: []" >> "${{ env.CONFIG_FILE }}"
+
+      - name: Remove YAML entries
+        run: |
+          set -e
+          echo "--- Removing YAML entries (Example) ---"
+          docker compose -f docker-compose.yaml exec actions-runner /bin/bash \
+            /ARISU/scripts/remove_yaml_entries.sh "${{ env.CONFIG_FILE }}" image \
+            --registry-path "images/alpine" \
+            --version "3.22"
+          docker compose -f docker-compose.yaml exec actions-runner /bin/bash \
+            /ARISU/scripts/remove_yaml_entries.sh "${{ env.CONFIG_FILE }}" chart \
+            --chart-name "nginx" \
+            --chart-version "15.14.0"
+
+      - name: Add YAML entries
+        run: |
+          set -e
+          echo "--- Adding YAML entries (Example) ---"
+          docker compose -f docker-compose.yaml exec actions-runner /bin/bash \
+          /ARISU/scripts/add_yaml_entries.sh "${{ env.CONFIG_FILE }}" image \
+          --source "docker.io/library/alpine" \
+          --destination-path "images/alpine" \
+          --version "3.22"
+          docker compose -f docker-compose.yaml exec actions-runner /bin/bash \
+          /ARISU/scripts/add_yaml_entries.sh "${{ env.CONFIG_FILE }}" chart \
+          --repo-name "bitnami" \
+          --repo-url "https://charts.bitnami.com/bitnami" \
+          --chart-name "nginx" \
+          --chart-version "15.14.0" \
+          --destination-path "charts/"
+
+      - name: Tear down Docker Compose services (optional, good for cleanup)
+        if: always() # Ensure this runs even if previous steps fail
+        run: docker-compose -f docker-compose.yaml down
+      
+      # TODO: Add a step to commit changes when scripts modify the file
+      # - name: Commit and Push changes
+      #   run: |
+      #     git config --local user.email "action@github.com"
+      #     git config --local user.name "GitHub Action"
+      #     git add "${{ env.CONFIG_FILE }}"
+      #     git commit -m "Automated: Update sync-config.yaml"
+      #     git push

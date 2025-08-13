@@ -15,10 +15,10 @@ services:
     #   # --- HTTPS (TLS) Configuration ---
     #  REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
     #  REGISTRY_HTTP_TLS_KEY: /certs/domain.key
-    volumes:
+    # volumes:
     #   #- ./local_registry/data:/var/lib/registry # Persist registry data
     #   - ./local_registry/auth:/auth:ro          # (read-only)
-     - ./local_registry/certs:/certs:ro 
+    # - ./local_registry/certs:/certs:ro 
 
   skopeo:
     image: my-skopeo-helm:latest
@@ -48,13 +48,15 @@ services:
       - ./scripts:/ARISU/scripts
       - ./config:/ARISU/config
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
-    entrypoint: 
-      ["/bin/bash",
-      "/ARISU/scripts/ARISU.sh",
-      "--run", "validate",
-      "--run", "check"]
+    # entrypoint: 
+    #   ["/bin/bash",
+    #   "/ARISU/scripts/ARISU.sh",
+    #   "--run", "sync",
+    #   "--run", "validate",
+    #   "--run", "check"]
     # depends_on:
     #  - registry
+    command: tail -f /dev/null
     profiles:
       - runner
 
