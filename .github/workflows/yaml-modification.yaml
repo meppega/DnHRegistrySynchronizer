@@ -27,9 +27,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Set up Docker Compose
-        uses: docker/setup-docker-compose@v2
-
       # - name: 'Az CLI login'
       #   uses: azure/login@v2
       #   with:
@@ -46,11 +43,11 @@ jobs:
           push: false
 
       - name: Bring up Docker Compose services
-        run: docker-compose -f docker-compose.yaml up -d --build ubuntu-skopeo
+        run: docker compose -f docker-compose.yaml up -d --build ubuntu-skopeo
 
       - name: Re/Install skopeo in ubuntu-skopeo container
         run: |
-          docker-compose -f docker-compose.yaml exec ubuntu-skopeo bash -c "apt-get update && apt-fast install -y skopeo"
+          docker compose -f docker-compose.yaml exec ubuntu-skopeo bash -c "apt-get update && apt-fast install -y skopeo"
 
       - name: Create or clear the target config file
         # This ensures the file exists before the scripts try to modify it
@@ -91,7 +88,7 @@ jobs:
 
       - name: Tear down Docker Compose services (optional, good for cleanup)
         if: always() # Ensure this runs even if previous steps fail
-        run: docker-compose -f docker-compose.yaml down
+        run: docker compose -f docker-compose.yaml down
       
       # TODO: Add a step to commit changes when scripts modify the file
       # - name: Commit and Push changes

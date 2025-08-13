@@ -36,16 +36,16 @@ jobs:
           push: false
 
       - name: Bring up Docker Compose services
-        run: docker-compose -f docker-compose.yaml up -d --build actions-runner
+        run: docker compose -f docker-compose.yaml up -d --build actions-runner
 
       - name: Install skopeo in actions-runner container
         run: |
-          docker-compose -f docker-compose.yaml exec actions-runner bash -c "apt-get update && apt-fast install -y skopeo"
+          docker compose -f docker-compose.yaml exec actions-runner bash -c "apt-get update && apt-fast install -y skopeo"
 
       - name: Execute script inside actions-runner container
         run: |
-          docker-compose -f docker-compose.yaml exec actions-runner /bin/bash /ARISU/scripts/ARISU.sh --run sync --run validate --run check
+          docker compose -f docker-compose.yaml exec actions-runner /bin/bash /ARISU/scripts/ARISU.sh --run sync --run validate --run check
 
       - name: Tear down Docker Compose services (optional, good for cleanup)
         if: always() # Ensure this runs even if previous steps fail
-        run: docker-compose -f docker-compose.yaml down
+        run: docker compose -f docker-compose.yaml down
