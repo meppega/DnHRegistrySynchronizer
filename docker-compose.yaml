@@ -21,21 +21,37 @@ services:
     # - ./local_registry/certs:/certs:ro 
 
   skopeo:
-    image: my-skopeo-helm:latest
+    image: skopeo-helm:latest
     build:
       context: ./skopeo-with-helm
-      dockerfile: my-skopeo-helm.dockerfile
+      dockerfile: skopeo-helm.dockerfile
     container_name: skopeo
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts:/ARISU/scripts
       - ./config:/ARISU/config
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
-    entrypoint: ["/bin/bash", "/ARISU/scripts/ARISU.sh", "-h"]
+    entrypoint: ["/bin/bash", "-c"] # "/ARISU/scripts/ARISU.sh", "-h"]
     # depends_on:
     #  - registry
+    command: ["tail -f /dev/null"]
     profiles:
       - skopeo
+
+  ubuntu-skopeo:
+    image: ubuntu-skopeo-helm:latest
+    build:
+      context: ./skopeo-with-helm
+      dockerfile: ubuntu-skopeo-helm.dockerfile
+    container_name: ubuntu-skopeo
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts:/ARISU/scripts
+      - ./config:/ARISU/config
+    # entrypoint: ["/bin/bash", "/ARISU/scripts/ARISU.sh", "-h"]
+    command: ["bash", "-c", "tail -f /dev/null"]
+    profiles:
+      - uskopeo
 
   acions-runner:
     image: actions-runner:latest
