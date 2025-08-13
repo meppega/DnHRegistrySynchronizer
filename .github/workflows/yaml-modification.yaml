@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     # runs-on: rebootrebels-azure-prod
     # environment: prod
+    permissions:
+      contents: write
     env:
       CONFIG_FILE: "config/sync-config.yaml"
     steps:
@@ -51,57 +53,65 @@ jobs:
       #   run: |
       #     docker compose -f docker-compose.yaml exec ubuntu-skopeo bash -c "apt-get update && apt-fast install -y skopeo"
 
-      - name: Create or clear the target config file
-        # This ensures the file exists before the scripts try to modify it
+      - name: Verify initial config file content (for debugging)
         run: |
-          mkdir -p config
-          echo "dockerImages: []" > "${{ env.CONFIG_FILE }}"
-          echo "helmCharts: []" >> "${{ env.CONFIG_FILE }}"
-
-      - name: Remove YAML entries
+          echo "--- Initial content of config/sync-config.yaml on runner ---"
+          cat "${{ env.CONFIG_FILE }}"
+          ls -l config/
+          echo "--- Initial content of config/sync-config.yaml in skopeo container ---"
+          docker compose -f docker-compose.yaml exec ubuntu-skopeo cat "/ARISU/${{ env.CONFIG_FILE }}"
+      
+      - name: Remove YAML entries using skopeo container
         run: |
           set -e
           echo "--- Removing YAML entries (Example) ---"
           docker compose -f docker-compose.yaml exec ubuntu-skopeo /bin/bash \
-            /ARISU/scripts/remove_yaml_entries.sh "${{ env.CONFIG_FILE }}" image \
+            /ARISU/scripts/remove_yaml_entries.sh "/ARISU/${{ env.CONFIG_FILE }}" image \
             --registry-path "images/alpine" \
             --version "3.22"
           docker compose -f docker-compose.yaml exec ubuntu-skopeo /bin/bash \
-            /ARISU/scripts/remove_yaml_entries.sh "${{ env.CONFIG_FILE }}" chart \
+            /ARISU/scripts/remove_yaml_entries.sh "/ARISU/${{ env.CONFIG_FILE }}" chart \
             --chart-name "nginx" \
             --chart-version "15.14.0"
 
-      - name: Add YAML entries
+      - name: Add YAML entries using skopeo container
         run: |
           set -e
           echo "--- Adding YAML entries (Example) ---"
           docker compose -f docker-compose.yaml exec ubuntu-skopeo /bin/bash \
-          /ARISU/scripts/add_yaml_entries.sh "${{ env.CONFIG_FILE }}" image \
+          /ARISU/scripts/add_yaml_entries.sh "/ARISU/${{ env.CONFIG_FILE }}" image \
           --source "docker.io/library/alpine" \
           --destination-path "images/alpine" \
           --version "3.22"
           docker compose -f docker-compose.yaml exec ubuntu-skopeo /bin/bash \
-          /ARISU/scripts/add_yaml_entries.sh "${{ env.CONFIG_FILE }}" chart \
+          /ARISU/scripts/add_yaml_entries.sh "/ARISU/${{ env.CONFIG_FILE }}" chart \
           --repo-name "bitnami" \
           --repo-url "https://charts.bitnami.com/bitnami" \
           --chart-name "nginx" \
           --chart-version "15.14.0" \
           --destination-path "charts/"
 
-      - name: Print Updated Config File
+      - name: Verify final config file content (for debugging)
         run: |
-          echo "--- Content of ${{ env.CONFIG_FILE }} after updates ---"
+          echo "--- Final content of config/sync-config.yaml on runner ---"
           cat "${{ env.CONFIG_FILE }}"
+          echo "--- Final content of config/sync-config.yaml in skopeo container ---"
+          docker compose -f docker-compose.yaml exec skopeo cat "/ARISU/${{ env.CONFIG_FILE }}"
 
       - name: Tear down Docker Compose services (optional, good for cleanup)
         if: always() # Ensure this runs even if previous steps fail
         run: docker compose -f docker-compose.yaml down
       
       # TODO: Add a step to commit changes when scripts modify the file
-      - name: Commit and Push changes # <--- UNCOMMENTED AND ENABLED
+      - name: Commit and Push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          # Check if there are any changes to commit
-          git diff --exit-code ${{ env.CONFIG_FILE }} || \
-          (git add "${{ env.CONFIG_FILE }}" && git commit -m "Automated: Update sync-config.yaml for ${{ github.event.inputs.branch }}" && git push)
+          git add "${{ env.CONFIG_FILE }}"
+          git diff --staged --quiet || git commit -m "Automated: Update sync-config.yaml on branch ${{ github.event.inputs.branch || 'RR-6677' }}"
+          # Only push if there are changes to avoid error on no-op commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git push
+          fi
