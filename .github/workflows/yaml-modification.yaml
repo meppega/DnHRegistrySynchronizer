@@ -45,9 +45,10 @@ jobs:
       - name: Bring up Docker Compose services
         run: docker compose -f docker-compose.yaml up -d --build ubuntu-skopeo
 
-      - name: Re/Install skopeo in ubuntu-skopeo container
-        run: |
-          docker compose -f docker-compose.yaml exec ubuntu-skopeo bash -c "apt-get update && apt-fast install -y skopeo"
+      # this wont run, containers are set up in a way that doesnt allow installing applications
+      # - name: Re/Install skopeo in ubuntu-skopeo container
+      #   run: |
+      #     docker compose -f docker-compose.yaml exec ubuntu-skopeo bash -c "apt-get update && apt-fast install -y skopeo"
 
       - name: Create or clear the target config file
         # This ensures the file exists before the scripts try to modify it

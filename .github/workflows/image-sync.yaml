@@ -38,9 +38,10 @@ jobs:
       - name: Bring up Docker Compose services
         run: docker compose -f docker-compose.yaml up -d --build actions-runner
 
-      - name: Install skopeo in actions-runner container
-        run: |
-          docker compose -f docker-compose.yaml exec actions-runner bash -c "apt-get update && apt-fast install -y skopeo"
+      # this wont run, containers are set up in a way that doesnt allow installing applications
+      # - name: Install skopeo in actions-runner container
+      #   run: |
+      #     docker compose -f docker-compose.yaml exec actions-runner bash -c "apt-get update && apt-fast install -y skopeo"
 
       - name: Execute script inside actions-runner container
         run: |
