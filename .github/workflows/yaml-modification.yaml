@@ -96,7 +96,7 @@ jobs:
           echo "--- Final content of config/sync-config.yaml on runner ---"
           cat "${{ env.CONFIG_FILE }}"
           echo "--- Final content of config/sync-config.yaml in skopeo container ---"
-          docker compose -f docker-compose.yaml exec skopeo cat "/ARISU/${{ env.CONFIG_FILE }}"
+          docker compose -f docker-compose.yaml exec ubuntu-skopeo cat "/ARISU/${{ env.CONFIG_FILE }}"
 
       - name: Tear down Docker Compose services (optional, good for cleanup)
         if: always() # Ensure this runs even if previous steps fail
