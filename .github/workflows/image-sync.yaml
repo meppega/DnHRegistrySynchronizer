@@ -1,4 +1,4 @@
-name: \[RR-6677\] Sync Images and Charts
+name: "[RR-6677] Sync Images and Charts"
 
 on:
   workflow_dispatch:

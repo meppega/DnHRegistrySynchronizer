@@ -1,4 +1,4 @@
-name: \[RR-6677\] Update yaml containing images for sync
+name: "[RR-6677] Update yaml containing images for sync"
 
 on:
   workflow_dispatch:
