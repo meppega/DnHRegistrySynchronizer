@@ -15,7 +15,11 @@
 #     tls-verify: true
 #     cert-dir: /home/john/certs
 quay.io:
-    tls-verify: false
     images:
         coreos/etcd:
+            - v3.5.9
+docker.io:
+    images:
+        alpine:
+            - "3.22"
             - latest

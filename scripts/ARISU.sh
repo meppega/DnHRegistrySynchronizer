@@ -119,12 +119,10 @@ main() {
     local PARSED_OPTIONS
     # Use array for long options for robustness with getopt
     local LONG_OPTIONS="config-file:,skip:,run:,login,tls-verify,help"
-    PARSED_OPTIONS=$(getopt -o c:s:r:lth --long "${LONG_OPTIONS}" -n "$SCRIPT_NAME" -- "$@")
-
-    if [[ $? -ne 0 ]]; then
+ 
+    if ! PARSED_OPTIONS=$(getopt -o c:s:r:lth --long "${LONG_OPTIONS}" -n "$SCRIPT_NAME" -- "$@"); then
         # getopt failed, meaning invalid options were provided
         display_help >&2
-        exit 1
     fi
 
     eval set -- "$PARSED_OPTIONS"

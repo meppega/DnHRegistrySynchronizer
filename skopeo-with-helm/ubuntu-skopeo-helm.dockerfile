@@ -21,7 +21,9 @@ RUN apt-fast update \
     && apt-fast install -y --no-install-recommends \
     yq \
     skopeo \
-    wget
+    wget \
+    curl \
+    util-linux
 
 WORKDIR /tmp
 
@@ -31,12 +33,12 @@ RUN wget "https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz" -O helm.
     rm -rf linux-amd64 helm.tar.gz
 
 # Create a non-root user and switch to it
-RUN useradd -m -s /bin/bash appuser && \
-    chown -R appuser:appuser /tmp
+RUN useradd -m -s /bin/bash runner && \
+    chown -R runner:runner /tmp
 
-USER appuser
-# Set the working directory for the appuser
-WORKDIR /home/appuser
+USER runner
+# Set the working directory for the runner
+WORKDIR /home/runner
 
 # Optional: Set environment variables for the user
-ENV HOME=/home/appuser
+ENV HOME=/home/runner
