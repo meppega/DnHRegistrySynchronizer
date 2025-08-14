@@ -82,7 +82,7 @@ validate_docker_images_by_digest() {
 
 		local dest_image="${registry_url}/${dest_path}"
 
-		log_info "Checking image: ${source_image} -> ${dest_image}" "validate_docker_images_by_digest"
+		log_info "Checking image: ${source_image} -> ${dest_image}/${source_image##*/}" "validate_docker_images_by_digest"
 
 		# Get digest for source image (assuming public registries usually need --tls-verify=true or default behavior)
 		local source_digest
@@ -90,7 +90,7 @@ validate_docker_images_by_digest() {
 
 		# Get digest for destination image (using --tls-verify=false for local/insecure registry as per original script)
 		local dest_digest
-		dest_digest=$(get_docker_image_digest "${dest_image}" "--tls-verify=false")
+		dest_digest=$(get_docker_image_digest "${dest_image}/${source_image##*/}" "--tls-verify=false")
 
 		if [[ -z ${source_digest} ]]; then
 			log_warning "Status: SKIP (Source image digest not found, possibly due to access or non-existence for ${source_image})" "validate_docker_images_by_digest"
@@ -99,7 +99,7 @@ validate_docker_images_by_digest() {
 		elif [[ ${source_digest} == "${dest_digest}" ]]; then
 			log_info "Status: PASS (Digests match: ${source_digest})" "validate_docker_images_by_digest"
 		else
-			log_warning "Status: SKIP (Digests mismatch for ${source_image} -> ${dest_image})" "validate_docker_images_by_digest"
+			log_warning "Status: FAIL (Digests mismatch for ${source_image} -> ${dest_image})" "validate_docker_images_by_digest"
 			log_warning "  Source: ${source_digest}" "validate_docker_images_by_digest"
 			log_warning "  Dest:   ${dest_digest}" "validate_docker_images_by_digest"
 		fi

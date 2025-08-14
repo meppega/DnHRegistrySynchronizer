@@ -25,6 +25,7 @@ check_registry_images() {
 	# Retrieve registry credentials from the config file
 	local REGISTRY_URL
 	REGISTRY_URL=$(yq '.registry.url' "${config_file}") || die "Failed to get registry URL from config file: ${config_file}."
+	REGISTRY_URL=$(echo "${REGISTRY_URL}" | sed -e 's/^"//' -e 's/"$//')
 
 	local REGISTRY_USER
 	REGISTRY_USER=$(yq '.registry.user' "${config_file}") || log_warning "Registry user not found in config. Proceeding without authentication for public registries." "check_registry_images"
@@ -45,6 +46,10 @@ check_registry_images() {
 
 	if [[ $image_count -gt 0 ]]; then
 		for i in $(seq 0 $((image_count - 1))); do
+			local source_image
+			source_image=$(yq ".dockerImages[$i].source" "${config_file}") || log_error "Failed to get source for dockerImages[$i]." "check_registry_images"
+			source_image=$(echo "${source_image}" | sed -e 's/^"//' -e 's/"$//')
+			source_image=${source_image##*/}
 			local dest_path
 			dest_path=$(yq ".dockerImages[$i].destinationPath" "${config_file}") || log_error "Failed to get destinationPath for dockerImages[$i]." "check_registry_images"
 			dest_path=$(echo "${dest_path}" | sed -e 's/^"//' -e 's/"$//')
@@ -52,8 +57,8 @@ check_registry_images() {
 			version=$(yq ".dockerImages[$i].version" "${config_file}") || log_error "Failed to get version for dockerImages[$i]." "check_registry_images"
 			version=$(echo "${version}" | sed -e 's/^"//' -e 's/"$//')
 
-			if [[ -n $dest_path && -n $version ]]; then
-				local expected_dest_image="${dest_path}:${version}"
+			if [[ -n $dest_path && -n $version && -n $source_image ]]; then
+				local expected_dest_image="${dest_path}/${source_image}:${version}"
 				expected_images["${expected_dest_image}"]=1
 				log_info "Expected Docker image: ${expected_dest_image}" "check_registry_images"
 			else
