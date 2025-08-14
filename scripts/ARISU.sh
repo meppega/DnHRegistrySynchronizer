@@ -227,7 +227,8 @@ main() {
 
     if should_run_script "sync"; then
         echo "--- Syncing Docker images and Helm Charts ---"
-        sync_registries "${CONFIG_FILE}" #"${REGISTRY_URL}" "${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}" "${CACHE_DIR}"
+        loop_through_yaml_config_for_skopeo "${CONFIG_FILE}"  #"${REGISTRY_URL}" "${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}" "${CACHE_DIR}"
+        loop_through_yaml_config_for_helm "${CONFIG_FILE}"
     else
         log_info "Skipping 'sync' stage." "main"
     fi

@@ -23,7 +23,8 @@ RUN apt-fast update \
     skopeo \
     wget \
     curl \
-    util-linux
+    util-linux \
+    jq
 
 WORKDIR /tmp
 

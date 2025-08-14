@@ -69,8 +69,10 @@ validate_docker_images_by_digest() {
 	for i in $(seq 0 $((image_count - 1))); do
 		local source_image
 		source_image=$(yq ".dockerImages[$i].source" "${config_file}") || log_warning "Failed to get source for dockerImages[$i]." "validate_docker_images_by_digest"
+		source_image=$(echo "${source_image}" | sed -e 's/^"//' -e 's/"$//')
 		local dest_path
 		dest_path=$(yq ".dockerImages[$i].destinationPath" "${config_file}") || log_warning "Failed to get destinationPath for dockerImages[$i]." "validate_docker_images_by_digest"
+		dest_path=$(echo "${dest_path}" | sed -e 's/^"//' -e 's/"$//')
 
 		# Ensure source_image and dest_path are not empty before proceeding
 		if [[ -z $source_image || -z $dest_path ]]; then
@@ -130,12 +132,16 @@ validate_helm_charts_by_digest() {
 	for i in $(seq 0 $((chart_count - 1))); do
 		local repo_url
 		repo_url=$(yq ".helmCharts[$i].repoUrl" "${config_file}") || log_warning "Failed to get repoUrl for helmCharts[$i]." "validate_helm_charts_by_digest"
+		repo_url=$(echo "${repo_url}" | sed -e 's/^"//' -e 's/"$//')
 		local chart_name
 		chart_name=$(yq ".helmCharts[$i].chartName" "${config_file}") || log_warning "Failed to get chartName for helmCharts[$i]." "validate_helm_charts_by_digest"
+		chart_name=$(echo "${chart_name}" | sed -e 's/^"//' -e 's/"$//')
 		local chart_version
 		chart_version=$(yq ".helmCharts[$i].chartVersion" "${config_file}") || log_warning "Failed to get chartVersion for helmCharts[$i]." "validate_helm_charts_by_digest"
+		chart_version=$(echo "${chart_version}" | sed -e 's/^"//' -e 's/"$//')
 		local dest_path
 		dest_path=$(yq ".helmCharts[$i].destinationPath" "${config_file}") || log_warning "Failed to get destinationPath for helmCharts[$i]." "validate_helm_charts_by_digest"
+		dest_path=$(echo "${dest_path}" | sed -e 's/^"//' -e 's/"$//')
 
 		# Ensure all required fields are present
 		if [[ -z $repo_url || -z $chart_name || -z $chart_version || -z $dest_path ]]; then
@@ -211,6 +217,7 @@ validate_sync_digests() {
 
 	local registry_url
 	registry_url=$(yq '.registry.url' "${config_file}") || die "Failed to get registry URL from config file: ${config_file}."
+	registry_url=$(echo "${registry_url}" | sed -e 's/^"//' -e 's/"$//')
 
 	# Login to registry is not strictly needed for skopeo/helm pull if credentials are passed via flags,
 	# or if it's an insecure registry with --plain-http. The original script had commented-out logins.

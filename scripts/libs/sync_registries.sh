@@ -110,6 +110,7 @@ check_and_sync_skopeo() {
 
 	log_info "'${full_dest_image_ref}' not found. Copying image..." "check_and_sync_skopeo"
 	skopeo copy \
+		--preserve-digests \
 		"${full_source_image_ref}" \
 		"${full_dest_image_ref}" \
 		--dest-tls-verify=false ||
@@ -134,6 +135,7 @@ loop_through_yaml_config_for_helm() {
 	local registry_url
 	# Use || die to ensure critical yq parsing errors immediately stop the script.
 	registry_url=$(yq '.registry.url' "${config_file}") || die "Failed to get registry URL from config file: ${config_file}."
+	registry_url=$(echo "${registry_url}" | sed -e 's/^"//' -e 's/"$//')
 
 	# Login to registry if credentials are provided. This is usually done once per script.
 	# local registry_user
@@ -162,10 +164,15 @@ loop_through_yaml_config_for_helm() {
 		local repo_name="" chart_name="" chart_version="" dest_path="" repo_url=""
 
 		repo_name=$(yq ".helmCharts[$i].repoName" "${config_file}") || log_error "Failed to get repoName for chart index $i." "loop_through_yaml_config_for_helm"
+		repo_name=$(echo "${repo_name}" | sed -e 's/^"//' -e 's/"$//')
 		repo_url=$(yq ".helmCharts[$i].repoUrl" "${config_file}") || log_error "Failed to get repoUrl for chart index $i." "loop_through_yaml_config_for_helm"
+		repo_url=$(echo "${repo_url}" | sed -e 's/^"//' -e 's/"$//')
 		chart_name=$(yq ".helmCharts[$i].chartName" "${config_file}") || log_error "Failed to get chartName for chart index $i." "loop_through_yaml_config_for_helm"
+		chart_name=$(echo "${chart_name}" | sed -e 's/^"//' -e 's/"$//')
 		chart_version=$(yq ".helmCharts[$i].chartVersion" "${config_file}") || log_error "Failed to get chartVersion for chart index $i." "loop_through_yaml_config_for_helm"
+		chart_version=$(echo "${chart_version}" | sed -e 's/^"//' -e 's/"$//')
 		dest_path=$(yq ".helmCharts[$i].destinationPath" "${config_file}") || log_error "Failed to get destinationPath for chart index $i." "loop_through_yaml_config_for_helm"
+		dest_path=$(echo "${dest_path}" | sed -e 's/^"//' -e 's/"$//')
 
 		# Check if any critical parsing failed for this chart entry
 		if [[ -z $repo_name || -z $repo_url || -z $chart_name || -z $chart_version || -z $dest_path ]]; then
@@ -204,6 +211,7 @@ loop_through_yaml_config_for_skopeo() {
 
 	local registry_url
 	registry_url=$(yq '.registry.url' "${config_file}") || die "Failed to get registry URL from config file: ${config_file}."
+	registry_url=$(echo "${registry_url}" | sed -e 's/^"//' -e 's/"$//')
 
 	# Perform Skopeo login here if necessary, using credentials from config_file
 	# local registry_user
@@ -233,6 +241,11 @@ loop_through_yaml_config_for_skopeo() {
 		source_image=$(yq ".dockerImages[$i].source" "${config_file}") || log_error "Failed to get source image for index $i." "loop_through_yaml_config_for_skopeo"
 		dest_path=$(yq ".dockerImages[$i].destinationPath" "${config_file}") || log_error "Failed to get destinationPath for index $i." "loop_through_yaml_config_for_skopeo"
 		version=$(yq ".dockerImages[$i].version" "${config_file}") || log_error "Failed to get version for index $i." "loop_through_yaml_config_for_skopeo"
+
+		# Remove leading/trailing slashes and any quotes
+        source_image=$(echo "${source_image}" | sed -e 's/^"//' -e 's/"$//')
+        dest_path=$(echo "${dest_path}" | sed -e 's/^"//' -e 's/"$//' -e 's:^/*::; s:/*$::')
+        version=$(echo "${version}" | sed -e 's/^"//' -e 's/"$//')
 
 		# Check if any critical parsing failed for this image entry
 		if [[ -z $source_image || -z $dest_path || -z $version ]]; then

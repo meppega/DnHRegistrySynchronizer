@@ -4,10 +4,10 @@ registry:
   password: admin
 dockerImages:
   - source: docker.io/grafana/grafana
-    destinationPath: images/grafana
+    destinationPath: images
     version: latest
   - source: docker.io/library/alpine
-    destinationPath: images/alpine
+    destinationPath: images
     version: "3.22"
 helmCharts:
   - repoName: bitnami

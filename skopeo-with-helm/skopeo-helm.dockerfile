@@ -11,6 +11,7 @@ RUN microdnf update -y && \
         yq \
         curl \
         util-linux \
+        jq \
     && microdnf clean all \
     && rm -rf /var/cache/yum
 

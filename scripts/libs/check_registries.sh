@@ -47,8 +47,10 @@ check_registry_images() {
 		for i in $(seq 0 $((image_count - 1))); do
 			local dest_path
 			dest_path=$(yq ".dockerImages[$i].destinationPath" "${config_file}") || log_error "Failed to get destinationPath for dockerImages[$i]." "check_registry_images"
+			dest_path=$(echo "${dest_path}" | sed -e 's/^"//' -e 's/"$//')
 			local version
 			version=$(yq ".dockerImages[$i].version" "${config_file}") || log_error "Failed to get version for dockerImages[$i]." "check_registry_images"
+			version=$(echo "${version}" | sed -e 's/^"//' -e 's/"$//')
 
 			if [[ -n $dest_path && -n $version ]]; then
 				local expected_dest_image="${dest_path}:${version}"
@@ -71,10 +73,13 @@ check_registry_images() {
 		for i in $(seq 0 $((chart_count - 1))); do
 			local chart_name
 			chart_name=$(yq ".helmCharts[$i].chartName" "${config_file}") || log_error "Failed to get chartName for helmCharts[$i]." "check_registry_images"
+			chart_name=$(echo "${chart_name}" | sed -e 's/^"//' -e 's/"$//')
 			local chart_version
 			chart_version=$(yq ".helmCharts[$i].chartVersion" "${config_file}") || log_error "Failed to get chartVersion for helmCharts[$i]." "check_registry_images"
+			chart_version=$(echo "${chart_version}" | sed -e 's/^"//' -e 's/"$//')
 			local dest_path
 			dest_path=$(yq ".helmCharts[$i].destinationPath" "${config_file}") || log_error "Failed to get destinationPath for helmCharts[$i]." "check_registry_images"
+			dest_path=$(echo "${dest_path}" | sed -e 's/^"//' -e 's/"$//')
 
 			if [[ -n $dest_path && -n $chart_name && -n $chart_version ]]; then
 				# Helm charts are typically OCI artifacts, and their full path in registry is dest_path/chart_name:chart_version
