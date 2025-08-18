@@ -1,0 +1,87 @@
+name: "[RR-6677] Add Docker Image to Sync Configuration"
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run the workflow on'
+        required: true
+        default: 'RR-6677'
+      image_source:
+        description: 'Source image (e.g., docker.io/library/alpine)'
+        required: true
+      image_destination_path:
+        description: 'Destination path in target registry (e.g., images/alpine)'
+        required: true
+      image_version:
+        description: 'Image version (e.g., 3.22)'
+        required: true
+
+jobs:
+  add-docker-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      CONFIG_FILE: "config/sync-config.yaml"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'RR-6677' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./skopeo-with-helm
+          file: ./skopeo-with-helm/ubuntu-skopeo-helm.dockerfile
+          tags: ubuntu-skopeo-helm:latest
+          push: false
+
+      - name: Bring up Docker Compose services
+        run: docker compose -f docker-compose.yaml up -d --build ubuntu-skopeo
+
+      - name: Verify initial config file content (for debugging)
+        run: |
+          echo "--- Initial content of config/sync-config.yaml on runner ---"
+          cat "${{ env.CONFIG_FILE }}"
+          ls -l config/
+          echo "--- Initial content of config/sync-config.yaml in skopeo container ---"
+          docker compose -f docker-compose.yaml exec ubuntu-skopeo cat "/ARISU/${{ env.CONFIG_FILE }}"
+
+      - name: Add Docker Image entry using skopeo container
+        run: |
+          set -e
+          echo "--- Adding Docker Image entry ---"
+          docker compose -f docker-compose.yaml exec ubuntu-skopeo /bin/bash \
+          /ARISU/scripts/add_yaml_entries.sh "/ARISU/${{ env.CONFIG_FILE }}" image \
+          --source "${{ github.event.inputs.image_source }}" \
+          --destination-path "${{ github.event.inputs.image_destination_path }}" \
+          --version "${{ github.event.inputs.image_version }}"
+
+      - name: Verify final config file content (for debugging)
+        run: |
+          echo "--- Final content of config/sync-config.yaml on runner ---"
+          cat "${{ env.CONFIG_FILE }}"
+          echo "--- Final content of config/sync-config.yaml in skopeo container ---"
+          docker compose -f docker-compose.yaml exec ubuntu-skopeo cat "/ARISU/${{ env.CONFIG_FILE }}"
+
+      - name: Tear down Docker Compose services (optional, good for cleanup)
+        if: always() # Ensure this runs even if previous steps fail
+        run: docker compose -f docker-compose.yaml down
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add "${{ env.CONFIG_FILE }}"
+          git diff --staged --quiet || git commit -m "Automated: Added Docker image ${{ github.event.inputs.image_source }}:${{ github.event.inputs.image_version }} to sync-config.yaml on branch ${{ github.event.inputs.branch || 'RR-6677' }}"
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git push
+          fi

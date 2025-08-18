@@ -1,0 +1,83 @@
+name: "[RR-6677] Delete Helm Chart from Sync Configuration"
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run the workflow on'
+        required: true
+        default: 'RR-6677'
+      chart_name:
+        description: 'Name of the Helm chart to delete (e.g., nginx)'
+        required: true
+      chart_version:
+        description: 'Version of the Helm chart to delete (e.g., 15.14.0)'
+        required: true
+
+jobs:
+  delete-helm-chart:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      CONFIG_FILE: "config/sync-config.yaml"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'RR-6677' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./skopeo-with-helm
+          file: ./skopeo-with-helm/ubuntu-skopeo-helm.dockerfile
+          tags: ubuntu-skopeo-helm:latest
+          push: false
+
+      - name: Bring up Docker Compose services
+        run: docker compose -f docker-compose.yaml up -d --build ubuntu-skopeo
+
+      - name: Verify initial config file content (for debugging)
+        run: |
+          echo "--- Initial content of config/sync-config.yaml on runner ---"
+          cat "${{ env.CONFIG_FILE }}"
+          ls -l config/
+          echo "--- Initial content of config/sync-config.yaml in skopeo container ---"
+          docker compose -f docker-compose.yaml exec ubuntu-skopeo cat "/ARISU/${{ env.CONFIG_FILE }}"
+
+      - name: Remove Helm Chart entry using skopeo container
+        run: |
+          set -e
+          echo "--- Removing Helm Chart entry ---"
+          docker compose -f docker-compose.yaml exec ubuntu-skopeo /bin/bash \
+            /ARISU/scripts/remove_yaml_entries.sh "/ARISU/${{ env.CONFIG_FILE }}" chart \
+            --chart-name "${{ github.event.inputs.chart_name }}" \
+            --chart-version "${{ github.event.inputs.chart_version }}"
+
+      - name: Verify final config file content (for debugging)
+        run: |
+          echo "--- Final content of config/sync-config.yaml on runner ---"
+          cat "${{ env.CONFIG_FILE }}"
+          echo "--- Final content of config/sync-config.yaml in skopeo container ---"
+          docker compose -f docker-compose.yaml exec ubuntu-skopeo cat "/ARISU/${{ env.CONFIG_FILE }}"
+
+      - name: Tear down Docker Compose services (optional, good for cleanup)
+        if: always() # Ensure this runs even if previous steps fail
+        run: docker compose -f docker-compose.yaml down
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add "${{ env.CONFIG_FILE }}"
+          git diff --staged --quiet || git commit -m "Automated: Deleted Helm chart ${{ github.event.inputs.chart_name }}:${{ github.event.inputs.chart_version }} from sync-config.yaml on branch ${{ github.event.inputs.branch || 'RR-6677' }}"
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git push
+          fi
