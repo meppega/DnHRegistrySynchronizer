@@ -30,6 +30,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts:/ARISU/scripts
       - ./config:/ARISU/config
+      - ./charts-syncer/charts-syncer.yaml:/charts-syncer.yaml
+      - ./charts-syncer/registries.conf:/etc/containers/registries.conf:ro
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
     entrypoint: ["/bin/bash", "-c"] # "/ARISU/scripts/ARISU.sh", "-h"]
     # depends_on:
@@ -48,6 +50,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts:/ARISU/scripts
       - ./config:/ARISU/config
+      - ./charts-syncer/charts-syncer.yaml:/home/runner/charts-syncer.yaml
+      - ./charts-syncer/registries.conf:/etc/containers/registries.conf:ro
     # entrypoint: ["/bin/bash", "/ARISU/scripts/ARISU.sh", "-h"]
     command: ["bash", "-c", "tail -f /dev/null"]
     profiles:
@@ -63,6 +67,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts:/ARISU/scripts
       - ./config:/ARISU/config
+      - ./charts-syncer/charts-syncer.yaml:~/charts-syncer.yaml
+      #- ./charts-syncer/registries.conf:/etc/containers/registries.conf:ro
       #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
     # entrypoint: 
     #   ["/bin/bash",

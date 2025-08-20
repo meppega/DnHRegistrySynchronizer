@@ -23,3 +23,5 @@ docker.io:
         alpine:
             - "3.22"
             - latest
+        grafana:
+            - latest

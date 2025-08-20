@@ -2,13 +2,12 @@ source:
   repo:
     kind: HELM
     url: https://charts.bitnami.com/bitnami
-    chartsIndex: bitnami/nginx:15.14.0
+    # chartsIndex: bitnami/nginx:15.14.0
 
 target:
   repo:
     kind: OCI
     url: http://registry:5000/charts/
-    # plainHttp: true
 
 charts:
 #  - alpine

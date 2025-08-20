@@ -93,26 +93,33 @@ check_and_sync_skopeo() {
 	local dest_registry_base="$2"
 	local version="$3"
 
-	local full_source_image_ref="docker://${source_image}:${version}"
+	local full_source_image_ref="${source_image}:${version}"
 	# Use ##*/ to get only the image name (e.g., nginx from library/nginx)
-	local full_dest_image_ref="docker://${dest_registry_base}/${source_image##*/}:${version}"
+	local full_dest_image_ref="${dest_registry_base}/${source_image##*/}:${version}"
 
 	log_info "Checking if '${full_dest_image_ref}' exists in destination registry..." "check_and_sync_skopeo"
 
 	# Skopeo inspect to check existence
-	if skopeo inspect "${full_dest_image_ref}" --tls-verify=false >/dev/null 2>&1; then
-		log_info "'${full_dest_image_ref}' already exists. Skipping copy." "check_and_sync_skopeo"
+	if skopeo inspect "docker://${full_dest_image_ref}" --tls-verify=false >/dev/null 2>&1; then
+		log_info "'${full_dest_image_ref}' already exists. Skipping copy. Syncing instead." "check_and_sync_skopeo"
 		# TODO: Add logic for synchronization/diff if needed, perhaps by comparing digests
 		# log_info "Running sync logic for existing image..."
-		# skopeo sync ...
+		# skopeo sync \
+		# 	--src docker \
+		# 	--dest docker \
+		# 	"${full_source_image_ref}" \
+		# 	"docker://${full_dest_image_ref}" \
+		# 	--all \
+		# 	--dest-tls-verify=false ||
+		# die "Failed to sync image '${full_source_image_ref}' to '${full_dest_image_ref}'."
 		return 0 # Indicate success as image is already there
 	fi
 
 	log_info "'${full_dest_image_ref}' not found. Copying image..." "check_and_sync_skopeo"
 	skopeo copy \
-		--preserve-digests \
-		"${full_source_image_ref}" \
-		"${full_dest_image_ref}" \
+		"docker://${full_source_image_ref}" \
+		"docker://${full_dest_image_ref}" \
+		--all \
 		--dest-tls-verify=false ||
 		die "Failed to copy image '${full_source_image_ref}' to '${full_dest_image_ref}'."
 	# --all \

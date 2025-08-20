@@ -9,6 +9,9 @@ dockerImages:
   - source: docker.io/library/alpine
     destinationPath: images
     version: "3.22"
+  - source: docker.io/library/alpine
+    destinationPath: images
+    version: latest
 helmCharts:
   - repoName: bitnami
     repoUrl: https://charts.bitnami.com/bitnami
