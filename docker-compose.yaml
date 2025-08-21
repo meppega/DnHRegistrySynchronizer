@@ -4,44 +4,9 @@ services:
     container_name: local-registry
     ports:
       - "5000:5000"
-    profiles:
-      - registry
-    environment:
-      REGISTRY_HTTP_SECRET: admin
-    #   # --- Basic Authentication Configuration ---
-    #   REGISTRY_AUTH: htpasswd
-    #   REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"
-    #   REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-    #   # --- HTTPS (TLS) Configuration ---
-    #  REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
-    #  REGISTRY_HTTP_TLS_KEY: /certs/domain.key
-    # volumes:
-    #   #- ./local_registry/data:/var/lib/registry # Persist registry data
-    #   - ./local_registry/auth:/auth:ro          # (read-only)
-    # - ./local_registry/certs:/certs:ro 
-
-  skopeo:
-    image: skopeo-helm:latest
-    build:
-      context: ./skopeo-with-helm
-      dockerfile: skopeo-helm.dockerfile
-    container_name: skopeo
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./scripts:/ARISU/scripts
-      - ./config:/ARISU/config
-      - ./charts-syncer/charts-syncer.yaml:/charts-syncer.yaml
-      - ./charts-syncer/registries.conf:/etc/containers/registries.conf:ro
-      #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
-    entrypoint: ["/bin/bash", "-c"] # "/ARISU/scripts/ARISU.sh", "-h"]
-    # depends_on:
-    #  - registry
-    command: ["tail -f /dev/null"]
-    profiles:
-      - skopeo
+    restart: always
 
   ubuntu-skopeo:
-    image: ubuntu-skopeo-helm:latest
     build:
       context: ./skopeo-with-helm
       dockerfile: ubuntu-skopeo-helm.dockerfile
@@ -52,45 +17,6 @@ services:
       - ./config:/ARISU/config
       - ./charts-syncer/charts-syncer.yaml:/home/runner/charts-syncer.yaml
       - ./charts-syncer/registries.conf:/etc/containers/registries.conf:ro
-    # entrypoint: ["/bin/bash", "/ARISU/scripts/ARISU.sh", "-h"]
-    command: ["bash", "-c", "tail -f /dev/null"]
-    profiles:
-      - uskopeo
-
-  acions-runner:
-    image: actions-runner:latest
-    build:
-      context: ./actions-runner
-      dockerfile: actions-runner.dockerfile
-    container_name: actions-runner
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./scripts:/ARISU/scripts
-      - ./config:/ARISU/config
-      - ./charts-syncer/charts-syncer.yaml:~/charts-syncer.yaml
-      #- ./charts-syncer/registries.conf:/etc/containers/registries.conf:ro
-      #- ./local_registry/certs/domain.crt:/etc/containers/certs.d/registry:5000/ca.crt
-    # entrypoint: 
-    #   ["/bin/bash",
-    #   "/ARISU/scripts/ARISU.sh",
-    #   "--run", "sync",
-    #   "--run", "validate",
-    #   "--run", "check"]
-    # depends_on:
-    #  - registry
-    command: tail -f /dev/null
-    profiles:
-      - runner
-
-  charts-syncer:
-    image: bitnami/charts-syncer:latest
-    container_name: charts-syncer
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./charts-syncer/charts-syncer.yaml:/charts-syncer.yaml
-      - ./charts-syncer/registries.conf:/etc/containers/registries.conf:ro
-    command: ["sync", "--insecure", "--config", "/charts-syncer.yaml","-v","3"]
-    # depends_on:
-    #  - registry
-    profiles:
-      - syncer
+    depends_on:
+      - registry
+    command: ["tail", "-f", "/dev/null"]

@@ -6,6 +6,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # check_dependencies: Ensures all required command-line tools are installed.
@@ -210,15 +211,19 @@ loop_through_yaml_config_for_helm() {
 # It uses common.sh's `log_info`, `log_warning`, `log_error`, `die`, and `file_exists_readable`.
 loop_through_yaml_config_for_skopeo() {
 	local config_file="$1"
-	log_info "Starting Docker image synchronization from config: ${config_file}" "loop_through_yaml_config_for_skopeo"
+	local registry_url="$2"
 
 	if ! file_exists_readable "$config_file"; then
-		die "Docker image config file not found or not readable: ${config_file}"
+		die "Sync config file not found or not readable: ${config_file}"
 	fi
 
-	local registry_url
-	registry_url=$(yq '.registry.url' "${config_file}") || die "Failed to get registry URL from config file: ${config_file}."
+	local config_url
+	config_url=$(yq '.registry.url' "${config_file}") || die "Failed to get registry URL from config file: ${config_file}."
+	
+	registry_url="${registry_url:-$config_url}"
 	registry_url=$(echo "${registry_url}" | sed -e 's/^"//' -e 's/"$//')
+
+	log_info "Starting Docker image synchronization from config: ${config_file}" "loop_through_yaml_config_for_skopeo"
 
 	# Perform Skopeo login here if necessary, using credentials from config_file
 	# local registry_user

@@ -12,20 +12,28 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 check_registry_images() {
 	local config_file="$1"
+	local registry_url="$2"
+
+	if ! file_exists_readable "$config_file"; then
+		die "Sync config file not found or not readable: ${config_file}"
+	fi
+
+	local config_url
+	config_url=$(yq '.registry.url' "${config_file}") || die "Failed to get registry URL from config file: ${config_file}."
+	
+	registry_url="${registry_url:-$config_url}"
+	registry_url=$(echo "${registry_url}" | sed -e 's/^"//' -e 's/"$//')
+
 	log_info "Starting registry image check against config: ${config_file}" "check_registry_images"
 
 	if ! file_exists_readable "$config_file"; then
 		die "Configuration file '${config_file}' not found or not readable. Cannot proceed with check."
 	fi
-
-	# Retrieve registry credentials from the config file
-	local REGISTRY_URL
-	REGISTRY_URL=$(yq '.registry.url' "${config_file}") || die "Failed to get registry URL from config file: ${config_file}."
-	REGISTRY_URL=$(echo "${REGISTRY_URL}" | sed -e 's/^"//' -e 's/"$//')
 
 	local REGISTRY_USER
 	REGISTRY_USER=$(yq '.registry.user' "${config_file}") || log_warning "Registry user not found in config. Proceeding without authentication for public registries." "check_registry_images"
@@ -100,22 +108,22 @@ check_registry_images() {
 	fi
 
 	# --- 2. Get existing images from the registry ---
-	log_info "Fetching repository catalog from registry: http://${REGISTRY_URL}/v2/_catalog..." "check_registry_images"
+	log_info "Fetching repository catalog from registry: http://${registry_url}/v2/_catalog..." "check_registry_images"
 	local auth_header=""
 	if [[ -n $REGISTRY_USER && -n $REGISTRY_PASS ]]; then
 		auth_header="-u ${REGISTRY_USER}:${REGISTRY_PASS}"
 	fi
 
 	local repos
-	repos=$(curl -s "${auth_header}" "http://${REGISTRY_URL}/v2/_catalog" | jq -r '.repositories[]')
+	repos=$(curl -s "${auth_header}" "http://${registry_url}/v2/_catalog" | jq -r '.repositories[]')
 
 	if [[ -z $repos ]]; then
-		log_warning "No repositories found in registry '${REGISTRY_URL}' or failed to connect/authenticate. Skipping detailed registry check." "check_registry_images"
+		log_warning "No repositories found in registry '${registry_url}' or failed to connect/authenticate. Skipping detailed registry check." "check_registry_images"
 	else
 		for repo in $repos; do
 			log_info "Fetching tags for repository: ${repo}..." "check_registry_images"
 			local tags
-			tags=$(curl -s "${auth_header}" "http://${REGISTRY_URL}/v2/${repo}/tags/list" | jq -r '.tags[]')
+			tags=$(curl -s "${auth_header}" "http://${registry_url}/v2/${repo}/tags/list" | jq -r '.tags[]')
 
 			if [[ -n $tags ]]; then
 				# Construct full image names (repo:tag) and add to existing_images array

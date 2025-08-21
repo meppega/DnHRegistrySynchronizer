@@ -70,10 +70,10 @@ _log_message() {
 	# Using printf for more robust formatting.
 	local timestamp
 	timestamp=$(date +'%Y-%m-%d %H:%M:%S')
-	local formatted_message="${timestamp} [${level}]: ${message_content}"
+	local formatted_message="${timestamp} [${level}] [${func_name}]: ${message_content}"
 
 	# Print to stderr and tee to log file
-	printf "%s\n" "$formatted_message" | tee -a "$LOG_FILE" >&2
+	printf "%s\n" "$formatted_message" >&2 #| tee -a "$LOG_FILE" >&2
 
 	# Send to journald. Ensure SCRIPT_NAME and FULL_PATH are set in the main script.
 	# Note: MESSAGE_ID and CODE_FILE should ideally reflect the *main* script,

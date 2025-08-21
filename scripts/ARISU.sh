@@ -16,6 +16,9 @@
 #   -t, --tls-verify           Use TLS verification for the target registry (HTTPS).
 #                              By default, local registry assumes --plain-http for helm and --tls-verify=false for skopeo.
 #                              Setting this flag explicitly enables TLS verification for the target registry.
+#   -u, --registry-url <url>   Override the registry URL from the config file.
+#   -U, --registry-user <user> Override the registry user from the config file.
+#   -P, --registry-pass <pass> Override the registry password from the config file.
 #   -h, --help                 Display this help message and exit.
 #
 # This script orchestrates Docker image and Helm chart synchronization and validation.
@@ -29,7 +32,7 @@ set -o pipefail
 # Set a trap to call the error handler from common.sh if any command fails.
 trap '_err_trap_handler' ERR
 
-# Global configuration variables
+# Global configuration variables, logs were disabled in final version in common.sh
 LOG_FILE="/home/runner/arisu.log" # Alternatively docker will capture "/dev/stderr" or "/var/log/arisu/arisu.log"
 # Define the name of your script for MESSAGE_ID in journald
 SCRIPT_NAME=$(basename "${BASH_SOURCE[0]}") || exit 100
@@ -38,11 +41,17 @@ FULL_PATH=$(readlink -f "${BASH_SOURCE[0]}") || exit 100
 export LOG_FILE SCRIPT_NAME FULL_PATH
 
 # --- Sourced Libraries ---
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/libs/common.sh" || exit 100
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/remove_yaml_entries.sh" || exit 100
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/add_yaml_entries.sh" || exit 100
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/libs/check_registries.sh" || exit 100
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/libs/sync_registries.sh" || exit 100
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/libs/validate_manifests.sh" || exit 100
 
 SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
@@ -56,10 +65,10 @@ CONFIG_FILE="" # Will be set by getopt, defaults to DEFAULT_CONFIG_FILE
 declare -a SCRIPTS_TO_RUN=()
 declare -a SCRIPTS_TO_SKIP=()
 
-# Placeholder for registry credentials (will be populated from config)
-REGISTRY_URL=""
-REGISTRY_USER=""
-REGISTRY_PASS=""
+# Variables for command line overrides
+CUSTOM_REGISTRY_URL=""
+CUSTOM_REGISTRY_USER=""
+CUSTOM_REGISTRY_PASS=""
 
 # --- Help Function ---
 display_help() {
@@ -74,14 +83,15 @@ display_help() {
     echo "  -t, --tls-verify           Use TLS verification for the target registry (HTTPS)."
     echo "                             By default, local registry assumes --plain-http for helm and --tls-verify=false for skopeo."
     echo "                             Setting this flag explicitly enables TLS verification for the target registry."
+    echo "  -u, --registry-url <url>   Override the registry URL from the config file."
+    echo "  -U, --registry-user <user> Override the registry user from the config file."
+    echo "  -P, --registry-pass <pass> Override the registry password from the config file."
     echo "  -h, --help                 Display this help message and exit."
     echo ""
     echo "Commands:"
     echo "  sync       : Synchronize Docker images and Helm charts as per config."
     echo "  validate   : Validate synchronized Docker images and Helm charts by digest comparison."
     echo "  check      : Perform registry content checks."
-    # echo "  add        : Add an 'image' or 'chart' entry to the config file. Use 'ARISU.sh add --help'."
-    # echo "  remove     : Remove an 'image' or 'chart' entry from the config file. Use 'ARISU.sh remove --help'."
     echo ""
     exit 0
 }
@@ -112,13 +122,12 @@ should_run_script() {
     return 0 # Default: run
 }
 
-
 # --- Main Logic ---
 main() {
     # Process command line arguments
     local PARSED_OPTIONS
     # Use array for long options for robustness with getopt
-    local LONG_OPTIONS="config-file:,skip:,run:,login,tls-verify,help"
+    local LONG_OPTIONS="config-file:,skip:,run:,login,tls-verify,help,registry-url:,registry-user:,registry-pass:"
  
     if ! PARSED_OPTIONS=$(getopt -o c:s:r:lth --long "${LONG_OPTIONS}" -n "$SCRIPT_NAME" -- "$@"); then
         # getopt failed, meaning invalid options were provided
@@ -148,6 +157,18 @@ main() {
             -t|--tls-verify)
                 USE_TLS_VERIFY=true
                 shift
+                ;;
+            -u|--registry-url)
+                CUSTOM_REGISTRY_URL="$2"
+                shift 2
+                ;;
+            -U|--registry-user)
+                CUSTOM_REGISTRY_USER="$2"
+                shift 2
+                ;;
+            -P|--registry-pass)
+                CUSTOM_REGISTRY_PASS="$2"
+                shift 2
                 ;;
             -h|--help)
                 display_help
@@ -189,9 +210,17 @@ main() {
     check_dependencies # This should always run to ensure tools are present
 
     # Get registry credentials from config file
-    REGISTRY_URL=$(yq '.registry.url' "${CONFIG_FILE}" || die "Failed to get registry URL from config file: ${CONFIG_FILE}.")
-    REGISTRY_USER=$(yq '.registry.user' "${CONFIG_FILE}" || log_warning "Registry user not found in config. Assuming anonymous access or environment variable login." "main")
-    REGISTRY_PASS=$(yq '.registry.password' "${CONFIG_FILE}" || log_warning "Registry password not found in config. Assuming anonymous access or environment variable login." "main")
+    local config_url
+    local config_user
+    local config_pass
+    config_url=$(yq '.registry.url' "${CONFIG_FILE}" || die "Failed to get registry URL from config file: ${CONFIG_FILE}.")
+    config_user=$(yq '.registry.user' "${CONFIG_FILE}" || log_warning "Registry user not found in config. Assuming anonymous access or environment variable login." "main")
+    config_pass=$(yq '.registry.password' "${CONFIG_FILE}" || log_warning "Registry password not found in config. Assuming anonymous access or environment variable login." "main")
+
+    # Override with command-line arguments if provided
+    REGISTRY_URL="${CUSTOM_REGISTRY_URL:-$config_url}"
+    REGISTRY_USER="${CUSTOM_REGISTRY_USER:-$config_user}"
+    REGISTRY_PASS="${CUSTOM_REGISTRY_PASS:-$config_pass}"
 
     local SKOPEO_TLS_FLAG="--tls-verify=false"
     local HELM_TLS_FLAG="--plain-http"
@@ -227,15 +256,15 @@ main() {
 
     if should_run_script "sync"; then
         echo "--- Syncing Docker images and Helm Charts ---"
-        loop_through_yaml_config_for_skopeo "${CONFIG_FILE}"  #"${REGISTRY_URL}" "${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}" "${CACHE_DIR}"
-        loop_through_yaml_config_for_helm "${CONFIG_FILE}"
+        loop_through_yaml_config_for_skopeo "${CONFIG_FILE}" "${REGISTRY_URL}" #"${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}"
+        loop_through_yaml_config_for_helm "${CONFIG_FILE}" "${REGISTRY_URL}"
     else
         log_info "Skipping 'sync' stage." "main"
     fi
 
     if should_run_script "validate"; then
         echo "--- Validating Manifests ---"
-        validate_sync_digests "${CONFIG_FILE}" #"${REGISTRY_URL}" "${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}" "${CACHE_DIR}"
+        validate_sync_digests "${CONFIG_FILE}" "${REGISTRY_URL}" #"${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}" "${CACHE_DIR}"
     else
         log_info "Skipping 'validate' stage." "main"
     fi
@@ -284,7 +313,7 @@ main() {
 
     if should_run_script "check"; then
         echo "--- Checking Registry Contents ---"
-        check_registry_images "${CONFIG_FILE}" #"${REGISTRY_URL}" "${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}"
+        check_registry_images "${CONFIG_FILE}" "${REGISTRY_URL}" "${SKOPEO_TLS_FLAG}" "${HELM_TLS_FLAG}"
     else
         log_info "Skipping 'check' stage." "main"
     fi

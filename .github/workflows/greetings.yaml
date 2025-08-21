@@ -2,8 +2,6 @@ name: "[RR-6677] Greetings"
 
 on:
   issues:
-    branches:
-      - "RR-6677"
     types: [opened]
   pull_request_target:
     branches:

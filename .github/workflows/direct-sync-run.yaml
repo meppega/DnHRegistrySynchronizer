@@ -1,0 +1,80 @@
+name: "Direct Sync on Runner"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set script permissions
+        run: chmod +x ./scripts/ARISU.sh
+      
+      - name: Create logs directory
+        run: mkdir -p ./logs
+
+      - name: Start local Docker registry
+        run: docker run -d --rm --name registry -p 5000:5000 registry:2
+
+      - name: Set up registry for insecure access
+        run: |
+          echo "export DOCKER_CONFIG=/tmp/docker-config" >> $GITHUB_ENV
+          mkdir -p /tmp/docker-config
+          echo '{"insecure-registries": ["localhost:5000"]}' > /tmp/docker-config/config.json
+
+      - name: Install all tools
+        run: |
+          # Install apt-fast
+          apt-get update -y \
+              && apt-get install -y software-properties-common \
+              && add-apt-repository -y ppa:git-core/ppa \
+              && add-apt-repository -y ppa:apt-fast/stable \
+              && apt-get update -y \
+              && apt-get install -y apt-fast
+
+          # Install Curl and other standard tools
+          apt-fast update \
+            && apt-fast install -y --no-install-recommends \
+            skopeo \
+            wget \
+            curl \
+            util-linux \
+            jq \
+            ca-certificates
+
+          # Add Helm's official APT repository and install Helm
+          curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+          sudo apt-get install -y apt-transport-https --no-install-recommends
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+          sudo apt-get update
+          sudo apt-get install -y helm
+
+          # Install Skopeo
+          # SKOPEO_VERSION="1.20.0"
+          # wget "https://github.com/containers/skopeo/releases/download/v${SKOPEO_VERSION}/skopeo-linux-amd64" -O skopeo_binary
+          # chmod +x skopeo_binary
+          # sudo mv skopeo_binary /usr/local/bin/skopeo
+
+          # Install yq
+          YQ_VERSION="v4.44.1" # or latest
+          wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O yq_binary
+          chmod +x yq_binary
+          sudo mv yq_binary /usr/local/bin/yq
+
+          apt-fast clean \
+            &&  rm -rf /var/lib/apt/lists/* \
+            &&  apt-fast autoremove -y
+
+      - name: Run sync script
+        run: |
+          ./scripts/ARISU.sh --run sync --run check \
+          --registry-url "localhost:5000" \  
+        # --registry-user "${{ secrets.REGISTRY_USER }}" \
+        # --registry-pass "${{ secrets.REGISTRY_PASS }}"
+
+      - name: Stop local registry
+        if: always()
+        run: docker stop registry

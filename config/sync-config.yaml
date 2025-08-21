@@ -17,7 +17,7 @@ helmCharts:
     repoUrl: https://charts.bitnami.com/bitnami
     chartName: nginx
     chartVersion: 15.14.0
-    destinationPath: charts/
+    destinationPath: charts
 # - repoName: kubernetes-ingress
 #   repoUrl: https://kubernetes.github.io/ingress-nginx
 #   chartName: ingress-nginx

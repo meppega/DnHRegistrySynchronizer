@@ -2,8 +2,6 @@ name: "[RR-6677] Sync Images and Charts"
 
 on:
   workflow_dispatch:
-    branches:
-      - "RR-6677"
   # schedule:
   #   - cron: '0 0 * * *'
   # push:
@@ -17,8 +15,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Compose
+        run: |
+          echo "DOCKER_BUILDKIT=0" >> $GITHUB_ENV
 
       # - name: 'Az CLI login'
       #   uses: azure/login@v2
@@ -27,26 +28,20 @@ jobs:
       #     tenant-id: ${{ vars.AZURE_TENANT_ID }}
       #     subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build actions-runner image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./actions-runner
-          file: ./actions-runner/actions-runner.dockerfile
-          tags: actions-runner:latest
-          push: false
+      # - name: Build ubuntu-skopeo image
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./skopeo-with-helm
+      #     file: ./skopeo-with-helm/ubuntu-skopeo-helm.dockerfile
+      #     tags: ubuntu-skopeo-helm:latest
+      #     push: false
 
-      - name: Bring up Docker Compose services
-        run: docker compose -f docker-compose.yaml up -d --build actions-runner
-
-      # this wont run, containers are set up in a way that doesnt allow installing applications
-      # - name: Install skopeo in actions-runner container
-      #   run: |
-      #     docker compose -f docker-compose.yaml exec actions-runner bash -c "apt-get update && apt-fast install -y skopeo"
+      - name: Build and bring up Docker Compose services
+        run: docker compose -f docker-compose.yaml up -d --build --force-recreate
 
       - name: Execute script inside actions-runner container
-        run: |
-          docker compose -f docker-compose.yaml exec actions-runner /bin/bash /ARISU/scripts/ARISU.sh --run sync --run validate --run check
+        run: docker compose -f docker-compose.yaml exec ubuntu-skopeo /bin/bash /ARISU/scripts/ARISU.sh --run sync --run check
 
-      - name: Tear down Docker Compose services (optional, good for cleanup)
-        if: always() # Ensure this runs even if previous steps fail
+      - name: Tear down Docker Compose services
+        if: always()
         run: docker compose -f docker-compose.yaml down

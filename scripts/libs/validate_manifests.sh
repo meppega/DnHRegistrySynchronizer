@@ -12,6 +12,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # get_docker_image_digest: Retrieves the SHA256 digest of a Docker image using skopeo inspect.
@@ -209,15 +210,19 @@ validate_helm_charts_by_digest() {
 # Main function to orchestrate the validation process
 validate_sync_digests() {
 	local config_file="$1"
-	log_info "Starting synchronization validation from config: ${config_file}" "validate_sync_digests"
+	local registry_url="$2"
 
 	if ! file_exists_readable "$config_file"; then
 		die "Sync config file not found or not readable: ${config_file}"
 	fi
 
-	local registry_url
-	registry_url=$(yq '.registry.url' "${config_file}") || die "Failed to get registry URL from config file: ${config_file}."
+	local config_url
+	config_url=$(yq '.registry.url' "${config_file}") || die "Failed to get registry URL from config file: ${config_file}."
+	
+	registry_url="${registry_url:-$config_url}"
 	registry_url=$(echo "${registry_url}" | sed -e 's/^"//' -e 's/"$//')
+
+	log_info "Starting synchronization validation from config: ${config_file}" "validate_sync_digests"
 
 	# Login to registry is not strictly needed for skopeo/helm pull if credentials are passed via flags,
 	# or if it's an insecure registry with --plain-http. The original script had commented-out logins.
